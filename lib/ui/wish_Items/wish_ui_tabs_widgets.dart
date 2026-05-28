@@ -1,0 +1,1215 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'wish_story_card_themes.dart';
+import 'wish_share_themes.dart';
+import 'wish_tag_models.dart';
+
+import '../item/share_theme/core/share_product_data.dart';
+import '../item/share_theme/core/share_theme_definition.dart';
+import 'package:taapdeel/viewobject/product.dart';
+import 'package:taapdeel/viewobject/common/ps_value_holder.dart';
+
+const Color _kNavy  = Color(0xFF043757);
+const Color _kBlue  = Color(0xFF0C587A);
+const Color _kTeal  = Color(0xFF24A9C4);
+
+
+String resolveTaapdeelWishImageUrl(String? raw, {String imageBaseUrl = ''}) {
+  String value = (raw ?? '').toString().trim();
+
+  if (value.isEmpty || value.toLowerCase() == 'null') return '';
+
+  value = value.replaceAll('\\', '/');
+
+  if (value.startsWith('http://') ||
+      value.startsWith('https://') ||
+      value.startsWith('file://')) {
+    return value;
+  }
+
+  while (value.startsWith('/')) {
+    value = value.substring(1);
+  }
+
+  value = value.replaceFirst(RegExp(r'^index\.php/'), '');
+
+  if (value.startsWith('uploads/') ||
+      value.startsWith('storage/') ||
+      value.startsWith('files/')) {
+    return 'https://taapdeel.com/$value';
+  }
+
+  final String cleanBase = imageBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+  if (cleanBase.isNotEmpty) {
+    if (cleanBase.endsWith('/uploads')) {
+      return '$cleanBase/$value';
+    }
+    return '$cleanBase/uploads/$value';
+  }
+
+  return 'https://taapdeel.com/uploads/$value';
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  DATA MODEL  (unchanged)
+// ══════════════════════════════════════════════════════════════════
+
+class WishCardData {
+  const WishCardData({
+    required this.id, required this.title, required this.hasHawadeet,
+    this.imageUrl, this.hookPhrase, this.storyTitle, this.storyText,
+    this.narratorComment, this.personaType = 'family', this.storyType,
+    this.needReason, this.meTooCount = 0, this.userReactedMeToo = false,
+    this.happenedLikeMeCount = 0, this.userReactedHappenedLikeMe = false,
+    this.offerCount = 0, this.shareCount = 0, this.favouriteCount = 0, this.hawadeetStatus,
+    this.catId, this.subCatId, this.storyThemeId,
+    this.roleOneLabel, this.roleTwoLabel, this.dialogueOne, this.dialogueTwo,
+    this.storyCardTitle,
+  });
+
+  final String id, title;
+  final bool hasHawadeet;
+  final String? imageUrl, hookPhrase, storyTitle, storyText, narratorComment;
+  final String personaType;
+  final String? storyType, needReason, hawadeetStatus, catId, subCatId;
+  final String? storyThemeId, roleOneLabel, roleTwoLabel;
+  final String? dialogueOne, dialogueTwo, storyCardTitle;
+  final int meTooCount, happenedLikeMeCount, offerCount, shareCount, favouriteCount;
+  final bool userReactedMeToo, userReactedHappenedLikeMe;
+
+  String get effectiveStoryTitle {
+    final String t = (storyCardTitle ?? storyTitle ?? '').trim();
+    return t.isNotEmpty ? t : (title.trim().isEmpty ? 'حدوتة تبديل' : title.trim());
+  }
+  String get effectiveHook {
+    final String t = (hookPhrase ?? needReason ?? '').trim();
+    return t.isNotEmpty ? t : 'مش لازم نشتري جديد، يمكن نلاقيها تبديل.';
+  }
+  String get effectiveDialogueOne {
+    final String d = (dialogueOne ?? '').trim();
+    if (d.isNotEmpty) return d;
+    final String l = (hookPhrase ?? '').trim();
+    return l.isNotEmpty ? l : 'بدور على $title ومش عايز/ة أشتري جديد لو في فرصة تبديل.';
+  }
+  String get effectiveDialogueTwo {
+    final String d = (dialogueTwo ?? '').trim();
+    if (d.isNotEmpty) return d;
+    final String l = (storyText ?? narratorComment ?? '').trim();
+    return l.isNotEmpty ? l : 'جرب/ي تبديل، يمكن الحاجة موجودة عند حد ومش محتاجها.';
+  }
+
+  factory WishCardData.fromProduct(Product p) {
+    final dynamic dp = p;
+    String? rawHi;
+    try { rawHi = dp.highlightInfo?.toString().trim(); } catch (_) {}
+    if (rawHi == null || rawHi.isEmpty || rawHi == 'null') { try { rawHi = dp.highlight_info?.toString().trim(); } catch (_) {} }
+    if (rawHi == null || rawHi.isEmpty || rawHi == 'null') { try { rawHi = dp.highlightInformation?.toString().trim(); } catch (_) {} }
+    if (rawHi == null || rawHi.isEmpty || rawHi == 'null') { try { rawHi = dp.highlightInfomation?.toString().trim(); } catch (_) {} }
+    Map<String, dynamic> hi = {};
+    if (rawHi != null && rawHi.isNotEmpty && rawHi != 'null') {
+      try { final dynamic d = jsonDecode(rawHi); if (d is Map) hi = Map<String, dynamic>.from(d); } catch (_) {}
+    }
+    String? rHi(List<String> keys) { for (final k in keys) { final v = (hi[k] ?? '').toString().trim(); if (v.isNotEmpty && v.toLowerCase() != 'null') return v; } return null; }
+    String? rD(List<String> keys) {
+      for (final key in keys) {
+        try {
+          dynamic f;
+          if (key == 'storyTitle') f = dp.storyTitle; else if (key == 'story_title') f = dp.story_title;
+          else if (key == 'hookPhrase') f = dp.hookPhrase; else if (key == 'hook_phrase') f = dp.hook_phrase;
+          else if (key == 'storyText') f = dp.storyText; else if (key == 'story_text') f = dp.story_text;
+          else if (key == 'narratorComment') f = dp.narratorComment; else if (key == 'narrator_comment') f = dp.narrator_comment;
+          else if (key == 'storyType') f = dp.storyType; else if (key == 'story_type') f = dp.story_type;
+          else if (key == 'personaType') f = dp.personaType; else if (key == 'persona_type') f = dp.persona_type;
+          else if (key == 'needReason') f = dp.needReason; else if (key == 'need_reason') f = dp.need_reason;
+          else if (key == 'meTooCount') f = dp.meTooCount; else if (key == 'me_too_count') f = dp.me_too_count;
+          else if (key == 'shareCount') f = dp.shareCount; else if (key == 'share_count') f = dp.share_count;
+          else if (key == 'favouriteCount') f = dp.favouriteCount; else if (key == 'favourite_count') f = dp.favourite_count;
+          else if (key == 'favoriteCount') f = dp.favoriteCount; else if (key == 'favorite_count') f = dp.favorite_count;
+          else if (key == 'offerCount') f = dp.offerCount; else if (key == 'offer_count') f = dp.offer_count;
+          else if (key == 'hawadeetStatus') f = dp.hawadeetStatus; else if (key == 'hawadeet_status') f = dp.hawadeet_status;
+          else if (key == 'userReactedMeToo') f = dp.userReactedMeToo; else if (key == 'user_reacted_me_too') f = dp.user_reacted_me_too;
+          else if (key == 'storyThemeId') f = dp.storyThemeId; else if (key == 'story_theme_id') f = dp.story_theme_id;
+          else if (key == 'roleOneLabel') f = dp.roleOneLabel; else if (key == 'role_one_label') f = dp.role_one_label;
+          else if (key == 'roleTwoLabel') f = dp.roleTwoLabel; else if (key == 'role_two_label') f = dp.role_two_label;
+          else if (key == 'dialogueOne') f = dp.dialogueOne; else if (key == 'dialogue_one') f = dp.dialogue_one;
+          else if (key == 'dialogueTwo') f = dp.dialogueTwo; else if (key == 'dialogue_two') f = dp.dialogue_two;
+          else if (key == 'storyCardTitle') f = dp.storyCardTitle; else if (key == 'story_card_title') f = dp.story_card_title;
+          else if (key == 'happenedLikeMeCount') f = dp.happenedLikeMeCount; else if (key == 'happened_like_me_count') f = dp.happened_like_me_count;
+          else if (key == 'userReactedHappenedLikeMe') f = dp.userReactedHappenedLikeMe; else if (key == 'user_reacted_happened_like_me') f = dp.user_reacted_happened_like_me;
+          final String t = (f ?? '').toString().trim();
+          if (t.isNotEmpty && t.toLowerCase() != 'null') return t;
+        } catch (_) {}
+      }
+      return null;
+    }
+    final stT = rD(['storyTitle','story_title']) ?? rHi(['story_title','hawadeet_title']);
+    final hkP = rD(['hookPhrase','hook_phrase']) ?? rHi(['hook_phrase','hookPhrase']);
+    final sTx = rD(['storyText','story_text']) ?? rHi(['story_text','storyText']);
+    final nrC = rD(['narratorComment','narrator_comment']) ?? rHi(['narrator_comment','narratorComment']);
+    final stTy = rD(['storyType','story_type']) ?? rHi(['story_type','storyType']);
+    final peTy = rD(['personaType','persona_type']) ?? rHi(['persona_type','personaType']) ?? 'family';
+    final ndR = rD(['needReason','need_reason']) ?? rHi(['need_reason','needReason']);
+    final hwS = rD(['hawadeetStatus','hawadeet_status']) ?? rHi(['hawadeet_status','hawadeetStatus']);
+    final thId = rD(['storyThemeId','story_theme_id']) ?? rHi(['story_theme_id','theme_id']);
+    final r1 = rD(['roleOneLabel','role_one_label']) ?? rHi(['role_one_label','speaker_one_label']);
+    final r2 = rD(['roleTwoLabel','role_two_label']) ?? rHi(['role_two_label','speaker_two_label']);
+    final d1 = rD(['dialogueOne','dialogue_one']) ?? rHi(['dialogue_one','scene_1','scene1']);
+    final d2 = rD(['dialogueTwo','dialogue_two']) ?? rHi(['dialogue_two','scene_2','scene2']);
+    final scTi = rD(['storyCardTitle','story_card_title']) ?? rHi(['story_card_title','card_title']);
+    final meTooStr = rD(['meTooCount','me_too_count']) ?? rHi(['me_too_count','meTooCount']) ?? '0';
+    final hapStr  = rD(['happenedLikeMeCount','happened_like_me_count']) ?? rHi(['happened_like_me_count','same_story_count']) ?? '0';
+    final ofStr   = rD(['offerCount','offer_count']) ?? rHi(['offer_count','offerCount']) ?? '0';
+    final shStr   = rD(['shareCount','share_count']) ?? rHi(['share_count','shareCount']) ?? '0';
+    final favStr  = rD(['favouriteCount','favourite_count','favoriteCount','favorite_count']) ??
+        rHi(['favourite_count','favorite_count','favouriteCount','favoriteCount']) ?? '0';
+    final reStr   = rD(['userReactedMeToo','user_reacted_me_too']) ?? rHi(['user_reacted_me_too','userReactedMeToo']);
+    final hrStr   = rD(['userReactedHappenedLikeMe','user_reacted_happened_like_me']) ?? rHi(['user_reacted_happened_like_me','userReactedHappenedLikeMe']);
+    String? imgUrl;
+    try { imgUrl = dp.fullPath?.toString().trim(); } catch (_) {}
+    if (imgUrl == null || imgUrl.isEmpty || imgUrl == 'null') { try { imgUrl = dp.imgPath?.toString().trim(); } catch (_) {} }
+    if (imgUrl == null || imgUrl.isEmpty || imgUrl == 'null') { try { imgUrl = dp.defaultPhoto?.imgPath?.toString().trim(); } catch (_) {} }
+    if (imgUrl == null || imgUrl.isEmpty || imgUrl == 'null') imgUrl = null;
+    String title = '';
+    try { title = dp.title?.toString().trim() ?? ''; } catch (_) {}
+    final bool hasH = <String?>[stT,hkP,sTx,nrC,scTi,d1,d2].any((v)=>(v??'').trim().isNotEmpty) || stTy=='official'||stTy=='user_generated'||stTy=='template';
+    return WishCardData(id:(dp.id??'').toString(),title:title,imageUrl:imgUrl,hasHawadeet:hasH,hookPhrase:hkP,storyTitle:stT,storyText:sTx,narratorComment:nrC,personaType:peTy,storyType:stTy,needReason:ndR,meTooCount:int.tryParse(meTooStr)??0,userReactedMeToo:reStr=='1'||reStr=='true',happenedLikeMeCount:int.tryParse(hapStr)??0,userReactedHappenedLikeMe:hrStr=='1'||hrStr=='true',offerCount:int.tryParse(ofStr)??0,shareCount:int.tryParse(shStr)??0,favouriteCount:int.tryParse(favStr)??0,hawadeetStatus:hwS,catId:(dp.catId??'').toString(),subCatId:(dp.subCatId??'').toString(),storyThemeId:thId,roleOneLabel:r1,roleTwoLabel:r2,dialogueOne:d1,dialogueTwo:d2,storyCardTitle:scTi);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  CATEGORY FILTER BAR
+// ══════════════════════════════════════════════════════════════════
+
+class HawadeetCategoryFilterBar extends StatelessWidget {
+  const HawadeetCategoryFilterBar({Key? key, required this.filters, required this.selectedKey, this.onSelected, this.onSelect})
+      : assert(onSelected != null || onSelect != null), super(key: key);
+  final List<HawadeetCategoryFilter> filters;
+  final String selectedKey;
+  final ValueChanged<String>? onSelected, onSelect;
+  @override Widget build(BuildContext context) => SizedBox(height: 42, child: ListView.separated(padding: const EdgeInsetsDirectional.only(start: 14, end: 14, bottom: 4), scrollDirection: Axis.horizontal, itemBuilder: (_, int i) { final f = filters[i]; final sel = f.key == selectedKey; return _FilterChip(filter: f, selected: sel, onTap: () => (onSelected ?? onSelect)!(f.key)); }, separatorBuilder: (_, __) => const SizedBox(width: 8), itemCount: filters.length));
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({required this.filter, required this.selected, required this.onTap});
+  final HawadeetCategoryFilter filter; final bool selected; final VoidCallback onTap;
+  static IconData _iconFor(String n) { switch (n) { case 'checkroom': return Icons.checkroom_rounded; case 'menu_book': return Icons.menu_book_rounded; case 'toys': return Icons.toys_rounded; case 'home': return Icons.home_rounded; case 'devices': return Icons.devices_rounded; case 'sports_soccer': return Icons.sports_soccer_rounded; case 'card_giftcard': return Icons.card_giftcard_rounded; default: return Icons.auto_stories_rounded; } }
+  @override Widget build(BuildContext context) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(999), child: AnimatedContainer(duration: const Duration(milliseconds: 180), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(999), color: selected ? _kBlue : Colors.white, border: Border.all(color: selected ? _kBlue : const Color(0xFFD8E4EE)), boxShadow: selected ? [BoxShadow(color: _kBlue.withOpacity(0.18), blurRadius: 12, offset: const Offset(0, 5))] : []), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(_iconFor(filter.iconName), size: 15, color: selected ? Colors.white : _kBlue), const SizedBox(width: 6), Text(filter.label, style: TextStyle(color: selected ? Colors.white : _kBlue, fontWeight: FontWeight.w800, fontSize: 12))])));
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  VIEW MODEL  –  now carries product data directly
+// ══════════════════════════════════════════════════════════════════
+
+class _VM {
+  const _VM({required this.title, required this.hook, required this.roleOne, required this.roleTwo, required this.textOne, required this.textTwo, required this.storyText, required this.meTooCount, required this.sameCount, required this.meTooActive, required this.sameActive, required this.onMeToo, required this.onSame, required this.productTitle, required this.productImageUrl, required this.imageBaseUrl, required this.onAddOffer});
+  final String title, hook, roleOne, roleTwo, textOne, textTwo, storyText;
+  final String productTitle; final String? productImageUrl; final String imageBaseUrl;
+  final int meTooCount, sameCount;
+  final bool meTooActive, sameActive;
+  final VoidCallback onMeToo, onSame, onAddOffer;
+
+  static _VM from(WishCardData d, WishStoryCardTheme t, int meToo, int same, bool meTooA, bool sameA, VoidCallback onMeToo, VoidCallback onSame, VoidCallback onAddOffer, String imageBaseUrl) => _VM(
+    title: d.effectiveStoryTitle, hook: d.effectiveHook,
+    roleOne: (d.roleOneLabel ?? '').trim().isNotEmpty ? d.roleOneLabel!.trim() : t.roleOne,
+    roleTwo: (d.roleTwoLabel ?? '').trim().isNotEmpty ? d.roleTwoLabel!.trim() : t.roleTwo,
+    textOne: d.effectiveDialogueOne, textTwo: d.effectiveDialogueTwo,
+    storyText: (d.storyText ?? '').trim(),
+    meTooCount: meToo, sameCount: same, meTooActive: meTooA, sameActive: sameA,
+    onMeToo: onMeToo, onSame: onSame,
+    productTitle: d.title, productImageUrl: d.imageUrl, imageBaseUrl: imageBaseUrl,
+    onAddOffer: onAddOffer,
+  );
+
+  /// Resolved full image URL
+  String? get resolvedImageUrl {
+    final String resolved = resolveTaapdeelWishImageUrl(
+      productImageUrl,
+      imageBaseUrl: imageBaseUrl,
+    );
+    return resolved.isEmpty ? null : resolved;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MAIN CARD WIDGET  –  collapsed by default
+// ══════════════════════════════════════════════════════════════════
+
+class HawadeetWishCard extends StatefulWidget {
+  const HawadeetWishCard({Key? key, required this.data, required this.onMeToo, required this.onHaveItem, required this.onShare, required this.onAddOffer, this.imageBaseUrl = '', this.themeIndex, this.product, this.openCardId, this.onExpansionChanged, this.initiallyExpanded = false}) : super(key: key);
+  final WishCardData data;
+  final Product? product;
+  final Future<void> Function(String id, bool reacted) onMeToo;
+  final VoidCallback onHaveItem, onShare, onAddOffer;
+  final String imageBaseUrl;
+  final int? themeIndex;
+  final String? openCardId;
+  final void Function(String id, bool expanded)? onExpansionChanged;
+  final bool initiallyExpanded;
+  @override State<HawadeetWishCard> createState() => _CardState();
+}
+
+class _CardState extends State<HawadeetWishCard> with SingleTickerProviderStateMixin {
+  late bool _meTooReacted;
+  late int  _meTooCount;
+  late bool _sameReacted;
+  late int  _sameCount;
+  bool _collapsed = true;   // ← starts COLLAPSED unless initiallyExpanded=true
+  bool _narratorExpanded = false;
+
+  late final AnimationController _animCtrl;
+  late final Animation<double> _expandAnim;
+
+  @override void initState() {
+    super.initState();
+    _meTooReacted = widget.data.userReactedMeToo;
+    _meTooCount   = widget.data.meTooCount;
+    _sameReacted  = widget.data.userReactedHappenedLikeMe;
+    _sameCount    = widget.data.favouriteCount > 0 ? widget.data.favouriteCount : widget.data.happenedLikeMeCount;
+    _collapsed = !widget.initiallyExpanded;
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+      value: widget.initiallyExpanded ? 1.0 : 0.0,
+    );
+    _expandAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut);
+  }
+
+  @override void dispose() { _animCtrl.dispose(); super.dispose(); }
+
+  @override
+  void didUpdateWidget(covariant HawadeetWishCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.data.id != widget.data.id) {
+      _collapsed = !widget.initiallyExpanded;
+      if (widget.initiallyExpanded) {
+        _animCtrl.value = 1.0;
+      } else {
+        _animCtrl.value = 0.0;
+      }
+      return;
+    }
+
+    if (!_collapsed && widget.openCardId != null && widget.openCardId != widget.data.id) {
+      _collapsed = true;
+      _animCtrl.reverse();
+    }
+  }
+
+  void _toggleCollapse() {
+    final bool willExpand = _collapsed;
+    setState(() => _collapsed = !willExpand);
+    if (willExpand) {
+      widget.onExpansionChanged?.call(widget.data.id, true);
+      _animCtrl.forward();
+    } else {
+      widget.onExpansionChanged?.call(widget.data.id, false);
+      _animCtrl.reverse();
+    }
+  }
+
+  Future<void> _handleMeToo() async {
+    HapticFeedback.lightImpact();
+    final prev = _meTooReacted; final pc = _meTooCount;
+    setState(() { _meTooReacted = !_meTooReacted; _meTooCount += _meTooReacted ? 1 : -1; if (_meTooCount < 0) _meTooCount = 0; });
+    try { await widget.onMeToo(widget.data.id, _meTooReacted); } catch (_) { if (mounted) setState(() { _meTooReacted = prev; _meTooCount = pc; }); }
+  }
+
+  void _handleSame() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _sameReacted = !_sameReacted;
+      _sameCount += _sameReacted ? 1 : -1;
+      if (_sameCount < 0) _sameCount = 0;
+    });
+    _writeFavouriteCountToProduct(_sameCount);
+  }
+
+  void _writeFavouriteCountToProduct(int value) {
+    final Product? p = widget.product;
+    if (p == null) return;
+    final dynamic dp = p;
+    try { dp.favouriteCount = value.toString(); } catch (_) {}
+    try { dp.favourite_count = value.toString(); } catch (_) {}
+    try { dp.favoriteCount = value.toString(); } catch (_) {}
+    try { dp.favorite_count = value.toString(); } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final WishStoryCardTheme theme = WishStoryCardThemes.byId(widget.data.storyThemeId);
+    final _VM vm = _VM.from(widget.data, theme, _meTooCount, _sameCount, _meTooReacted, _sameReacted, _handleMeToo, _handleSame, widget.onAddOffer, widget.imageBaseUrl);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.cardBackground,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: theme.accent.withOpacity(0.22)),
+        boxShadow: [BoxShadow(color: theme.accent.withOpacity(0.10), blurRadius: 20, offset: const Offset(0, 8))],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Column(children: [
+          // ── HEADER (always visible, tappable to expand/collapse) ──
+          GestureDetector(
+            onTap: _toggleCollapse,
+            child: _CollapsibleHeader(vm: vm, theme: theme, collapsed: _collapsed, imageOnRight: ((widget.themeIndex ?? 0) % 2 == 0)),
+          ),
+          if (_collapsed)
+            _CollapsedQuickActions(
+              theme: theme,
+              onShare: widget.onShare,
+              onHaveItem: widget.onHaveItem,
+              onSame: _handleSame,
+              sameCount: _sameCount,
+              sameActive: _sameReacted,
+            ),
+          // ── BODY (animated expand) ──
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: _collapsed ? const SizedBox.shrink() : _buildBody(vm, theme),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildBody(_VM vm, WishStoryCardTheme theme) {
+    final Widget card = _buildAttachedWishThemeBody(vm, theme);
+
+    return Column(children: [
+
+      card,
+      if (vm.storyText.isNotEmpty) _StoryTextSection(text: vm.storyText, theme: theme),
+      AnimatedSize(
+        duration: const Duration(milliseconds: 220),
+        child: _narratorExpanded && (widget.data.narratorComment ?? '').isNotEmpty
+            ? Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          child: _NarratorNote(text: widget.data.narratorComment!, theme: theme),
+        )
+            : const SizedBox.shrink(),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+        child: _ExpandedActionBar(
+          theme: theme,
+          onShare: widget.onShare,
+          onHaveItem: widget.onHaveItem,
+          onSame: _handleSame,
+          sameCount: _sameCount,
+          sameActive: _sameReacted,
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildAttachedWishThemeBody(_VM vm, WishStoryCardTheme storyTheme) {
+    final ShareThemeDefinition shareTheme = _resolveAttachedWishShareTheme();
+    final String imageUrl = resolveTaapdeelWishImageUrl(
+      vm.resolvedImageUrl ?? widget.data.imageUrl,
+      imageBaseUrl: widget.imageBaseUrl,
+    );
+
+    final ShareProductData shareData = ShareProductData.from(
+      widget.product ?? _WishCardShareProduct(widget.data),
+      imageUrl,
+      '',
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double width = constraints.maxWidth;
+          final double height = (width * 1.33).clamp(390.0, 560.0);
+          return SizedBox(
+            width: double.infinity,
+            height: height,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: shareTheme.builder(context, shareData),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  ShareThemeDefinition _resolveAttachedWishShareTheme() {
+    final List<ShareThemeDefinition> themes = WishShareThemes.themes;
+    if (themes.isEmpty) {
+      throw StateError('WishShareThemes.themes is empty.');
+    }
+
+    final String storyThemeId = (widget.data.storyThemeId ?? '').trim();
+    final String normalizedStoryThemeId = _normalizeThemeId(storyThemeId);
+
+    if (normalizedStoryThemeId.isNotEmpty) {
+      for (final ShareThemeDefinition theme in themes) {
+        if (theme.id == storyThemeId || _normalizeThemeId(theme.id) == normalizedStoryThemeId) {
+          return theme;
+        }
+      }
+    }
+
+    final int index = widget.themeIndex ?? 0;
+    return themes[index.abs() % themes.length];
+  }
+
+  String _normalizeThemeId(String value) {
+    String id = value.trim().toLowerCase();
+    if (id.isEmpty || id == 'null') return '';
+
+    while (id.startsWith('hawadeet_')) {
+      id = id.substring('hawadeet_'.length);
+    }
+    while (id.startsWith('story_')) {
+      id = id.substring('story_'.length);
+    }
+
+    return id;
+  }
+}
+
+class _WishCardShareProduct extends Product {
+  _WishCardShareProduct(this.data) : super();
+
+  final WishCardData data;
+
+  @override
+  String? get id => data.id;
+
+  @override
+  String? get title => data.title;
+
+  @override
+  String? get description {
+    final String text = data.storyText ?? data.narratorComment ?? data.hookPhrase ?? '';
+    return text.trim().isEmpty ? null : text.trim();
+  }
+
+  String? get catId => data.catId;
+
+  String? get subCatId => data.subCatId;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  COLLAPSIBLE HEADER  (always visible – clean white design)
+// ══════════════════════════════════════════════════════════════════
+
+class _CollapsibleHeader extends StatelessWidget {
+  const _CollapsibleHeader({
+    required this.vm,
+    required this.theme,
+    required this.collapsed,
+    required this.imageOnRight,
+  });
+
+  final _VM vm;
+  final WishStoryCardTheme theme;
+  final bool collapsed;
+  final bool imageOnRight;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = theme.accent;
+    final Color bg = Color.lerp(Colors.white, accent, 0.045)!;
+    final Widget thumb = _HeaderThumb(vm: vm, theme: theme);
+
+    final Widget textBlock = Expanded(
+      child: Column(
+        crossAxisAlignment:
+        imageOnRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'حدوتة ${vm.title}',
+            textDirection: TextDirection.rtl,
+            textAlign: imageOnRight ? TextAlign.center : TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.titleColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              height: 1.8,
+            ),
+          ),
+
+        ],
+      ),
+    );
+
+    final List<Widget> middle = imageOnRight
+        ? <Widget>[textBlock, const SizedBox(width: 10), thumb]
+        : <Widget>[thumb, const SizedBox(width: 10), textBlock];
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          height: 3,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+              colors: theme.headerGradient,
+            ),
+          ),
+        ),
+        Container(
+          width: double.infinity,
+          color: bg,
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(collapsed ? 0.10 : 0.18),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: accent.withOpacity(0.25)),
+                ),
+                child: Icon(
+                  collapsed
+                      ? Icons.keyboard_arrow_down_rounded
+                      : Icons.keyboard_arrow_up_rounded,
+                  color: accent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              ...middle,
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeaderThumb extends StatelessWidget {
+  const _HeaderThumb({required this.vm, required this.theme});
+
+  final _VM vm;
+  final WishStoryCardTheme theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final String imageUrl = resolveTaapdeelWishImageUrl(
+      vm.resolvedImageUrl ?? vm.productImageUrl,
+      imageBaseUrl: vm.imageBaseUrl,
+    );
+
+    return Container(
+      width: 56,
+      height: 56,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: theme.accent.withOpacity(0.32), width: 1.2),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: theme.accent.withOpacity(0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(13),
+        child: imageUrl.isNotEmpty
+            ? Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _thumbPlaceholder(),
+        )
+            : _thumbPlaceholder(),
+      ),
+    );
+  }
+
+  Widget _thumbPlaceholder() {
+    return Container(
+      color: theme.accent.withOpacity(0.06),
+      child: Icon(
+        Icons.image_outlined,
+        color: theme.accent.withOpacity(0.45),
+        size: 24,
+      ),
+    );
+  }
+}
+
+class _ExpandedActionBar extends StatelessWidget {
+  const _ExpandedActionBar({
+    required this.theme,
+    required this.onShare,
+    required this.onHaveItem,
+    required this.onSame,
+    required this.sameCount,
+    required this.sameActive,
+  });
+
+  final WishStoryCardTheme theme;
+  final VoidCallback onShare;
+  final VoidCallback onHaveItem;
+  final VoidCallback onSame;
+  final int sameCount;
+  final bool sameActive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      textDirection: TextDirection.rtl,
+      children: <Widget>[
+        Expanded(
+          flex: 5,
+          child: _ActionBtn(
+            label: 'حصلي نفس الحدوتة $sameCount',
+            icon: sameActive
+                ? Icons.sentiment_satisfied_alt_rounded
+                : Icons.sentiment_neutral_rounded,
+            bg: theme.accent,
+            onTap: onSame,
+          ),
+        ),
+        const SizedBox(width: 7),
+        Expanded(
+          flex: 3,
+          child: _ActionBtn(
+            label: 'عندي المنتج',
+            icon: Icons.shopping_bag_outlined,
+            bg: theme.bottomSecondary,
+            onTap: onHaveItem,
+          ),
+        ),
+        const SizedBox(width: 7),
+        SizedBox(
+          width: 48,
+          child: _ActionBtn(
+            label: '',
+            icon: Icons.share_rounded,
+            bg: theme.bottomPrimary,
+            onTap: onShare,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CollapsedQuickActions extends StatelessWidget {
+  const _CollapsedQuickActions({
+    required this.theme,
+    required this.onShare,
+    required this.onHaveItem,
+    required this.onSame,
+    required this.sameCount,
+    required this.sameActive,
+  });
+
+  final WishStoryCardTheme theme;
+  final VoidCallback onShare;
+  final VoidCallback onHaveItem;
+  final VoidCallback onSame;
+  final int sameCount;
+  final bool sameActive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Color.lerp(Colors.white, theme.accent, 0.035),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+      child: Row(
+        textDirection: TextDirection.rtl,
+        children: <Widget>[
+          Expanded(
+            flex: 5,
+            child: _MiniActionChip(
+              label: 'حصلي نفس الحدوتة $sameCount',
+              icon: sameActive
+                  ? Icons.sentiment_satisfied_alt_rounded
+                  : Icons.sentiment_neutral_rounded,
+              color: theme.accent,
+              active: sameActive,
+              onTap: onSame,
+            ),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            flex: 3,
+            child: _MiniActionChip(
+              label: 'عندي المنتج',
+              icon: Icons.shopping_bag_outlined,
+              color: theme.bottomSecondary,
+              onTap: onHaveItem,
+            ),
+          ),
+          const SizedBox(width: 7),
+          SizedBox(
+            width: 46,
+            child: _MiniActionChip(
+              label: '',
+              icon: Icons.share_rounded,
+              color: theme.bottomPrimary,
+              onTap: onShare,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniActionChip extends StatelessWidget {
+  const _MiniActionChip({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.active = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: active ? color.withOpacity(0.16) : Colors.white,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withOpacity(active ? 0.46 : 0.24)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: TextDirection.rtl,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  STORY TEXT SECTION
+// ══════════════════════════════════════════════════════════════════
+
+class _StoryTextSection extends StatelessWidget {
+  const _StoryTextSection({required this.text, required this.theme});
+  final String text; final WishStoryCardTheme theme;
+  @override Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: theme.accent.withOpacity(0.07),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: theme.accent.withOpacity(0.20)),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+        Text('الحدوتة', textDirection: TextDirection.rtl, style: TextStyle(color: theme.accent, fontSize: 11, fontWeight: FontWeight.w900)),
+        const SizedBox(width: 5),
+        Icon(Icons.auto_stories_rounded, size: 14, color: theme.accent),
+      ]),
+      const SizedBox(height: 6),
+      Text(text, textDirection: TextDirection.rtl, style: TextStyle(color: theme.titleColor.withOpacity(0.85), fontSize: 12.5, fontWeight: FontWeight.w600, height: 1.55)),
+    ]),
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  PRODUCT PANEL  –  receives data directly (no ancestor lookup)
+// ══════════════════════════════════════════════════════════════════
+
+class _ProductPanel extends StatelessWidget {
+  const _ProductPanel({required this.vm, required this.theme, this.imageHeight = 130, this.compact = false});
+  final _VM vm; final WishStoryCardTheme theme; final double imageHeight; final bool compact;
+
+  @override Widget build(BuildContext context) {
+    final String? url = vm.resolvedImageUrl;
+    return Container(
+      padding: EdgeInsets.all(compact ? 8 : 10),
+      decoration: BoxDecoration(color: theme.productPanel, borderRadius: BorderRadius.circular(20), border: Border.all(color: theme.accent.withOpacity(0.20))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)), child: Text('المنتج المطلوب', textAlign: TextAlign.center, style: TextStyle(color: theme.titleColor, fontWeight: FontWeight.w900, fontSize: compact ? 10 : 11.5))),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            height: imageHeight,
+            color: Colors.white,
+            child: url != null && url.isNotEmpty
+                ? Image.network(url, fit: BoxFit.cover,
+                loadingBuilder: (_, child, progress) => progress == null ? child : Center(child: CircularProgressIndicator(strokeWidth: 2, color: theme.accent)),
+                errorBuilder: (_, __, ___) => _imgPlaceholder(theme))
+                : _imgPlaceholder(theme),
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(vm.productTitle, textAlign: TextAlign.center, textDirection: TextDirection.rtl, maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: theme.titleColor, fontSize: compact ? 11 : 13, fontWeight: FontWeight.w900, height: 1.2)),
+        if (!compact) ...[
+          const SizedBox(height: 7),
+          OutlinedButton.icon(
+            onPressed: vm.onAddOffer,
+            style: OutlinedButton.styleFrom(foregroundColor: theme.accent, side: BorderSide(color: theme.accent.withOpacity(0.45)), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            icon: const Icon(Icons.add_business_rounded, size: 14),
+            label: const Text('اعمل عرض', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11.5)),
+          ),
+        ],
+      ]),
+    );
+  }
+
+  static Widget _imgPlaceholder(WishStoryCardTheme theme) => Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.image_outlined, color: theme.accent.withOpacity(0.35), size: 38), const SizedBox(height: 6), Text('صورة المنتج', style: TextStyle(color: theme.accent.withOpacity(0.45), fontSize: 10, fontWeight: FontWeight.w700))]);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  REACTION VARIANTS
+// ══════════════════════════════════════════════════════════════════
+
+/// Standard pill pair
+class _PillReact extends StatelessWidget {
+  const _PillReact({required this.vm, required this.c1, required this.c2});
+  final _VM vm; final Color c1, c2;
+  @override Widget build(BuildContext context) => Row(children: [
+    Expanded(child: _Pill(label: 'ده أنا :)', count: vm.meTooCount, active: vm.meTooActive, color: c1, onTap: vm.onMeToo)),
+    const SizedBox(width: 8),
+    Expanded(child: _Pill(label: 'حصل معايا :(', count: vm.sameCount, active: vm.sameActive, color: c2, onTap: vm.onSame)),
+  ]);
+}
+
+/// Emoji slider  ☹ | ─── | ☺ | [n]
+class _SliderReact extends StatelessWidget {
+  const _SliderReact({required this.vm, required this.trackColor, required this.fillColor});
+  final _VM vm; final Color trackColor, fillColor;
+  @override Widget build(BuildContext context) => Container(
+    height: 36,
+    decoration: BoxDecoration(color: trackColor.withOpacity(0.07), borderRadius: BorderRadius.circular(999), border: Border.all(color: trackColor.withOpacity(0.30))),
+    child: Row(children: [
+      Expanded(child: InkWell(onTap: vm.onSame, borderRadius: const BorderRadius.horizontal(right: Radius.circular(999)),
+          child: Center(child: Icon(Icons.sentiment_dissatisfied_rounded, size: 20, color: vm.sameActive ? fillColor : trackColor.withOpacity(0.5))))),
+      Container(width: 1, height: 20, color: trackColor.withOpacity(0.25)),
+      Expanded(child: InkWell(onTap: vm.onMeToo, borderRadius: const BorderRadius.horizontal(left: Radius.circular(999)),
+          child: Center(child: Icon(Icons.sentiment_satisfied_alt_rounded, size: 20, color: vm.meTooActive ? fillColor : trackColor.withOpacity(0.5))))),
+      Container(margin: const EdgeInsets.all(4), padding: const EdgeInsets.symmetric(horizontal: 8), decoration: BoxDecoration(color: trackColor.withOpacity(0.12), borderRadius: BorderRadius.circular(999)),
+          child: Text('${vm.meTooCount + vm.sameCount}', style: TextStyle(color: trackColor, fontSize: 10, fontWeight: FontWeight.w900))),
+    ]),
+  );
+}
+
+/// Circle O buttons (chalkboard style)
+class _CircleReact extends StatelessWidget {
+  const _CircleReact({required this.vm, required this.c1, required this.c2});
+  final _VM vm; final Color c1, c2;
+  @override Widget build(BuildContext context) => Row(children: [
+    Expanded(child: _CircleBtn(icon: Icons.sentiment_dissatisfied_rounded, label: 'حصل معايا', count: vm.sameCount, active: vm.sameActive, color: c2, onTap: vm.onSame)),
+    const SizedBox(width: 8),
+    Expanded(child: _CircleBtn(icon: Icons.sentiment_satisfied_alt_rounded, label: 'ده أنا', count: vm.meTooCount, active: vm.meTooActive, color: c1, onTap: vm.onMeToo)),
+  ]);
+}
+class _CircleBtn extends StatelessWidget {
+  const _CircleBtn({required this.icon, required this.label, required this.count, required this.active, required this.color, required this.onTap});
+  final IconData icon; final String label; final int count; final bool active; final Color color; final VoidCallback onTap;
+  @override Widget build(BuildContext context) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(12), child: AnimatedContainer(duration: const Duration(milliseconds: 160), padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7), decoration: BoxDecoration(color: active ? color.withOpacity(0.15) : Colors.transparent, borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withOpacity(active ? 0.5 : 0.28))), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, size: 15, color: color), const SizedBox(width: 4), Flexible(child: Text(label, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w800))), const SizedBox(width: 4), Container(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1), decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(999)), child: Text('$count', style: TextStyle(color: color, fontSize: 9.5, fontWeight: FontWeight.w900)))])));
+}
+
+/// Heart + Smiley outline (scrapbook, softFamily, notebook)
+class _HeartSmileyReact extends StatelessWidget {
+  const _HeartSmileyReact({required this.vm, required this.c1, required this.c2});
+  final _VM vm; final Color c1, c2;
+  @override Widget build(BuildContext context) => Row(children: [
+    Expanded(child: _OutlineBtn(icon: Icons.favorite_border_rounded, activeIcon: Icons.favorite_rounded, label: 'ده أنا', count: vm.meTooCount, active: vm.meTooActive, color: c1, onTap: vm.onMeToo)),
+    const SizedBox(width: 8),
+    Expanded(child: _OutlineBtn(icon: Icons.sentiment_satisfied_alt_rounded, activeIcon: Icons.sentiment_satisfied_alt_rounded, label: 'حصل معايا', count: vm.sameCount, active: vm.sameActive, color: c2, onTap: vm.onSame)),
+  ]);
+}
+class _OutlineBtn extends StatelessWidget {
+  const _OutlineBtn({required this.icon, required this.activeIcon, required this.label, required this.count, required this.active, required this.color, required this.onTap});
+  final IconData icon, activeIcon; final String label; final int count; final bool active; final Color color; final VoidCallback onTap;
+  @override Widget build(BuildContext context) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(999), child: AnimatedContainer(duration: const Duration(milliseconds: 160), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), decoration: BoxDecoration(color: active ? color.withOpacity(0.12) : Colors.white, borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withOpacity(active ? 0.5 : 0.28))), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(active ? activeIcon : icon, size: 15, color: color), const SizedBox(width: 5), Flexible(child: Text(label, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w800))), const SizedBox(width: 5), Text('$count', style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 10.5))])));
+}
+
+/// Receipt counter
+class _ReceiptReact extends StatelessWidget {
+  const _ReceiptReact({required this.vm, required this.c1, required this.c2});
+  final _VM vm; final Color c1, c2;
+  @override Widget build(BuildContext context) => Row(children: [
+    Expanded(child: _RCell(emoji: '🙂', label: 'ده أنا', count: vm.meTooCount, active: vm.meTooActive, color: c1, onTap: vm.onMeToo)),
+    Container(width: 1, height: 28, color: c2.withOpacity(0.20)),
+    Expanded(child: _RCell(emoji: '😕', label: 'حصل معايا', count: vm.sameCount, active: vm.sameActive, color: c2, onTap: vm.onSame)),
+  ]);
+}
+class _RCell extends StatelessWidget {
+  const _RCell({required this.emoji, required this.label, required this.count, required this.active, required this.color, required this.onTap});
+  final String emoji, label; final int count; final bool active; final Color color; final VoidCallback onTap;
+  @override Widget build(BuildContext context) => InkWell(onTap: onTap, child: Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Column(children: [Text(emoji, style: const TextStyle(fontSize: 18)), const SizedBox(height: 2), Text(label, style: TextStyle(fontSize: 9.5, color: color, fontWeight: FontWeight.w800)), AnimatedContainer(duration: const Duration(milliseconds: 160), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), decoration: BoxDecoration(color: active ? color : color.withOpacity(0.10), borderRadius: BorderRadius.circular(999)), child: Text('$count', style: TextStyle(color: active ? Colors.white : color, fontWeight: FontWeight.w900, fontSize: 10)))])));
+}
+
+// Base pill widget (used by PillReact)
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, required this.count, required this.active, required this.color, required this.onTap});
+  final String label; final int count; final bool active; final Color color; final VoidCallback onTap;
+  @override Widget build(BuildContext context) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(999), child: AnimatedContainer(duration: const Duration(milliseconds: 160), padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), decoration: BoxDecoration(color: active ? color.withOpacity(0.12) : Colors.white, borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withOpacity(active ? 0.45 : 0.22))), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Flexible(child: Text(label, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w900))), const SizedBox(width: 5), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: color.withOpacity(0.10), borderRadius: BorderRadius.circular(999)), child: Text('$count', style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w900)))])));
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  SHARED SMALL WIDGETS
+// ══════════════════════════════════════════════════════════════════
+
+class _ActionBtn extends StatelessWidget {
+  const _ActionBtn({
+    required this.label,
+    required this.icon,
+    required this.bg,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color bg;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: bg,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          minimumSize: const Size(0, 44),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
+        icon: Icon(
+          icon,
+          size: 15,
+          color: Colors.white,
+        ),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textDirection: TextDirection.rtl,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 11,
+            height: 1.0,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NarratorNote extends StatelessWidget {
+  const _NarratorNote({required this.text, required this.theme});
+  final String text; final WishStoryCardTheme theme;
+  @override Widget build(BuildContext context) => Container(width: double.infinity, padding: const EdgeInsets.all(11), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: theme.accent.withOpacity(0.16))), child: Text(text, textDirection: TextDirection.rtl, style: TextStyle(color: theme.titleColor.withOpacity(0.85), fontWeight: FontWeight.w700, height: 1.5)));
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  BOTTOM SHEET, MINI CARD, ADD BUTTON, SECTION HEADER
+// ══════════════════════════════════════════════════════════════════
+
+class HawadeetMeTooSheet extends StatelessWidget {
+  const HawadeetMeTooSheet({Key? key, required this.wishId, required this.title, required this.catId, required this.subCatId, required this.onAddWish, required this.onAddOffer, required this.onSearchCategory, required this.onShare}) : super(key: key);
+  final String wishId, title; final String? catId, subCatId;
+  final VoidCallback onAddWish, onAddOffer, onSearchCategory, onShare;
+  static Future<void> show({required BuildContext context, required String wishId, required String title, String? catId, String? subCatId, required VoidCallback onAddWish, required VoidCallback onAddOffer, required VoidCallback onSearchCategory, required VoidCallback onShare}) => showModalBottomSheet<void>(context: context, backgroundColor: Colors.transparent, barrierColor: Colors.black.withOpacity(0.28), builder: (_) => HawadeetMeTooSheet(wishId: wishId, title: title, catId: catId, subCatId: subCatId, onAddWish: onAddWish, onAddOffer: onAddOffer, onSearchCategory: onSearchCategory, onShare: onShare));
+  @override Widget build(BuildContext context) => Container(decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))), padding: const EdgeInsets.fromLTRB(20, 14, 20, 30), child: Column(mainAxisSize: MainAxisSize.min, children: [Container(width: 38, height: 4, decoration: BoxDecoration(color: Colors.black.withOpacity(0.12), borderRadius: BorderRadius.circular(999))), const SizedBox(height: 16), Container(width: 58, height: 58, decoration: BoxDecoration(gradient: const LinearGradient(colors: [_kNavy, _kTeal]), borderRadius: BorderRadius.circular(18)), child: const Icon(Icons.emoji_emotions_rounded, color: Colors.white, size: 30)), const SizedBox(height: 12), const Text('حابب تكمل الحدوتة؟', style: TextStyle(color: _kNavy, fontWeight: FontWeight.w900, fontSize: 20)), const SizedBox(height: 6), Text(title, textAlign: TextAlign.center, textDirection: TextDirection.rtl, style: TextStyle(color: _kBlue.withOpacity(0.72), fontWeight: FontWeight.w700)), const SizedBox(height: 18), _SheetTile(icon: Icons.add_comment_rounded, iconColor: _kBlue, title: 'احكي حدوتة جديدة', subtitle: 'ضيف طلبك بنفس الثيم اللي تحبه', onTap: () { Navigator.pop(context); onAddWish(); }), const SizedBox(height: 8), _SheetTile(icon: Icons.shopping_bag_outlined, iconColor: const Color(0xFF2E7D32), title: 'عندي المنتج المطلوب', subtitle: 'اعرضه وابدأ التبديل', onTap: () { Navigator.pop(context); onAddOffer(); }), const SizedBox(height: 8), _SheetTile(icon: Icons.search_rounded, iconColor: const Color(0xFF7E57C2), title: 'شوف منتجات قريبة', subtitle: 'ممكن تلاقي حل الحدوتة فورًا', onTap: () { Navigator.pop(context); onSearchCategory(); }), const SizedBox(height: 8), _SheetTile(icon: Icons.share_outlined, iconColor: const Color(0xFF1565C0), title: 'شارك الحدوتة', subtitle: 'يمكن حد من معارفك يكون عنده الحل', onTap: () { Navigator.pop(context); onShare(); })]));
+}
+
+class _SheetTile extends StatelessWidget {
+  const _SheetTile({required this.icon, required this.iconColor, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon; final Color iconColor; final String title, subtitle; final VoidCallback onTap;
+  @override Widget build(BuildContext context) => Material(color: Colors.transparent, child: InkWell(borderRadius: BorderRadius.circular(16), onTap: onTap, child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12), decoration: BoxDecoration(color: iconColor.withOpacity(0.06), borderRadius: BorderRadius.circular(16), border: Border.all(color: iconColor.withOpacity(0.16))), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: iconColor.withOpacity(0.12), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: iconColor, size: 20)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, textDirection: TextDirection.rtl, style: const TextStyle(color: _kNavy, fontWeight: FontWeight.w900)), const SizedBox(height: 2), Text(subtitle, textDirection: TextDirection.rtl, style: TextStyle(color: Colors.black.withOpacity(0.56), fontSize: 12.5))])), Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: iconColor.withOpacity(0.50))]))));
+}
+
+class WishMiniProductCard extends StatelessWidget {
+  const WishMiniProductCard({Key? key, required this.data, required this.onTap, this.imageBaseUrl = ''}) : super(key: key);
+  final WishCardData data; final VoidCallback onTap; final String imageBaseUrl;
+  @override Widget build(BuildContext context) {
+    String? url = data.imageUrl;
+    if (url != null && url.isNotEmpty && !url.startsWith('http') && imageBaseUrl.isNotEmpty) url = '$imageBaseUrl/$url';
+    return Material(color: Colors.transparent, child: InkWell(borderRadius: BorderRadius.circular(18), onTap: onTap, child: Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFDCE7F0)), boxShadow: [BoxShadow(color: _kNavy.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 6))]), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(flex: 6, child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(18)), child: Container(color: const Color(0xFFF3F8FC), child: url != null && url.isNotEmpty ? Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.image_outlined, color: Color(0xFFBACBD8), size: 28))) : const Center(child: Icon(Icons.favorite_border_rounded, color: Color(0xFFBACBD8), size: 28))))), Padding(padding: const EdgeInsets.fromLTRB(8, 8, 8, 4), child: Text(data.title, textDirection: TextDirection.rtl, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _kNavy, fontWeight: FontWeight.w800, fontSize: 12, height: 1.3))), Padding(padding: const EdgeInsets.fromLTRB(8, 0, 8, 8), child: Text('احكي لها حدوتة مناسبة', textDirection: TextDirection.rtl, style: TextStyle(color: _kTeal.withOpacity(0.92), fontWeight: FontWeight.w700, fontSize: 10.5)))]))));
+  }
+}
+
+class WishAddButton extends StatelessWidget {
+  const WishAddButton({
+    Key? key,
+    required this.onTap,
+    this.forceVisible,
+  }) : super(key: key);
+
+  final VoidCallback onTap;
+
+  /// Optional override from the parent page.
+  /// Use it when the page already knows that the user is logged in.
+  final bool? forceVisible;
+
+  bool _validUserId(String? value) {
+    final String userId = (value ?? '').trim().toLowerCase();
+
+    return userId.isNotEmpty &&
+        userId != 'null' &&
+        userId != '0' &&
+        userId != 'nologinuser' &&
+        userId != 'no_login_user' &&
+        userId != 'no_login_user_id';
+  }
+
+  bool _isLoggedIn(BuildContext context) {
+    if (forceVisible != null) {
+      return forceVisible!;
+    }
+
+    PsValueHolder? valueHolder;
+
+    try {
+      valueHolder = context.read<PsValueHolder>();
+    } catch (_) {
+      try {
+        valueHolder = Provider.of<PsValueHolder>(context, listen: false);
+      } catch (_) {
+        valueHolder = null;
+      }
+    }
+
+    if (valueHolder == null) {
+      return false;
+    }
+
+    final dynamic holder = valueHolder;
+
+    final List<String?> candidates = <String?>[
+      valueHolder.loginUserId,
+      _tryReadString(() => holder.userId),
+      _tryReadString(() => holder.user_id),
+      _tryReadString(() => holder.id),
+    ];
+
+    return candidates.any(_validUserId);
+  }
+
+  static String? _tryReadString(dynamic Function() getter) {
+    try {
+      final dynamic value = getter();
+      return value?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isLoggedIn(context)) {
+      return const SizedBox.shrink();
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[_kNavy, _kBlue, _kTeal],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: _kBlue.withOpacity(0.28),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.add_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'اضف حاجه تتمناها',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class WishSectionHeader extends StatelessWidget {
+  const WishSectionHeader({Key? key, required this.totalCount, this.showCount = true}) : super(key: key);
+  final int totalCount; final bool showCount;
+  @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(14, 14, 14, 8), child: const Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [Text('تبديــــل ... حدوته في كل بيت', textDirection: TextDirection.rtl, style: TextStyle(color: _kNavy, fontWeight: FontWeight.w900, fontSize: 18))]))]));
+}

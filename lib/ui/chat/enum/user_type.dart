@@ -1,0 +1,3 @@
+
+
+enum UserType { buyer, seller }

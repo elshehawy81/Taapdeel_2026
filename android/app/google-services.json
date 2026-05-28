@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "464009555844",
+    "project_id": "taapdeel-2026",
+    "storage_bucket": "taapdeel-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:464009555844:android:8d1331be3a06b88bb0b7d1",
+        "android_client_info": {
+          "package_name": "com.taapdeel.production"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCX7w4AdTQ13zp7K7w3jJAdHxBoNbnjWrs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
