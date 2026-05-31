@@ -1972,7 +1972,7 @@ class GeneralShareThemes {
               children: <Widget>[
                 _reactionChip('😂 طيب جدًا'),
                 _reactionChip('😍 يستاهل'),
-                _reactionChip('🔥 لقطة'),
+                _reactionChip('🔥 لُقْطَة'),
               ],
             ),
           ),

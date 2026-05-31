@@ -149,10 +149,7 @@ Future<void> _initFirebaseCore() async {
     }
 
     final FirebaseApp firebaseApp = Firebase.app();
-    debugPrint('FIREBASE_RUNTIME_projectId=${firebaseApp.options.projectId}');
-    debugPrint('FIREBASE_RUNTIME_appId=${firebaseApp.options.appId}');
-    debugPrint('FIREBASE_RUNTIME_messagingSenderId=${firebaseApp.options.messagingSenderId}');
-    debugPrint('FIREBASE_RUNTIME_apiKey=${firebaseApp.options.apiKey}');
+
 
   } on FirebaseException catch (e) {
     if (e.code == 'duplicate-app') {

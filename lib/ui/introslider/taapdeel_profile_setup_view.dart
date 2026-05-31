@@ -27,6 +27,19 @@ import 'package:provider/single_child_widget.dart';
 import '../location/item_location_first_view.dart';
 import '../location/item_location_township_first_view.dart';
 
+
+class _C
+{
+  static const Color navy = Color(0xFF061F3A);
+  static const Color deepNavy = Color(0xFF082B49);
+  static const Color petrol = Color(0xFF0B5471);
+  static const Color teal = Color(0xFF0E989B);
+  static const Color cyan = Color(0xFF24A9C4);
+  static const Color softText = Color(0xFF3E6078);
+  static const Color softBorder = Color(0xFFDCEEF5);
+  static const String font = 'Cairo';
+}
+
 class TaapdeelPickerOption {
   final String id;
   final String titleKey;
@@ -39,6 +52,122 @@ class TaapdeelPickerOption {
     this.subtitleKey,
     this.emoji,
   });
+}
+
+class _BenefitsStrip extends StatelessWidget {
+  const _BenefitsStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return _GlassCard(
+      radius: 18,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      child: const Row(
+        children: <Widget>[
+          Expanded(
+            child: _Benefit(
+              icon: Icons.payments_rounded,
+              label: 'وفر فلوسك',
+              color: Color(0xFF0B9A75),
+            ),
+          ),
+          _Vdivider(),
+          Expanded(
+            child: _Benefit(
+              icon: Icons.person_search_rounded,
+              label: 'وفر مجهودك',
+              color: Color(0xFF0E989B),
+            ),
+          ),
+          _Vdivider(),
+          Expanded(
+            child: _Benefit(
+              icon: Icons.lightbulb_rounded,
+              label: 'جدد حياتك',
+              color: Color(0xFF0D5E7B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Benefit extends StatelessWidget {
+  const _Benefit({required this.icon, required this.label, required this.color});
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Icon(icon, color: color, size: 22),
+        const SizedBox(width: 7),
+        Flexible(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: _C.font,
+              color: _C.navy,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Vdivider extends StatelessWidget {
+  const _Vdivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: 1, height: 34, color: _C.softBorder.withOpacity(0.72));
+  }
+}
+
+class _GlassInfoPanel extends StatelessWidget {
+  const _GlassInfoPanel({
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.54),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.80)),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: const Color(0xFF0C587A).withValues(alpha: 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 /// ======================================================
@@ -541,11 +670,11 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
                 children: <Widget>[
                   Expanded(
                     child: TaapdeelButton(
-                      label: 'profile_setup.intro_tour'.tr(),
+                      label: _copy('ابدأ التخصيص', 'Start personalization'),
                       isPrimary: true,
                       isExpanded: true,
                       onPressed: () =>
-                          _onGoIntroPressed(context, locationProvider),
+                          _onGoCategoryPressed(context, locationProvider),
                     ),
                   ),
                 ],
@@ -634,39 +763,25 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
                           PsDimens.space16,
                           24, // ✅ بدل 92
                         ),
-                        child: Column(
-                          children: <Widget>[
-                            const SizedBox(height: 80),
-                            _buildTopLogo(theme),
-                            const SizedBox(height: 8),
-                            Text(
-                              'profile_setup.title_hint'.tr(),
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: colorScheme.onSurface
-                                    .withValues(alpha: 0.70),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight - 56,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              _buildHeroIntroCard(theme),
+                              const SizedBox(height: 16),
+                              _buildProfileDataCard(
+                                context,
+                                theme,
+                                colorScheme,
+                                locationProvider,
                               ),
-                            ),
-                            const SizedBox(height: 60),
-                            TaapdeelCard(
-                              body: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: <Widget>[
-                                  _buildGenderAgeRow(theme, colorScheme),
-                                  const SizedBox(height: 14),
-                                  Text(
-                                    'profile_setup.location'.tr(),
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  _buildLocationRow(context, locationProvider),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                          ],
+                              const SizedBox(height: 16),
+                              const _BenefitsStrip(),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -682,7 +797,7 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
                       ),
                       child: Align(
                         alignment: AlignmentDirectional.topEnd,
-                       // child: _buildMiniLanguageToggle(),
+                        // child: _buildMiniLanguageToggle(),
                       ),
                     ),
                   ),
@@ -695,18 +810,459 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
     );
   }
 
+
+  String _copy(String ar, String en) {
+    return _isEnglish ? en : ar;
+  }
+
+  Widget _buildHeroIntroCard(ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
+          colors: <Color>[
+            Color(0xFFFFFFFF),
+            Color(0xFFF6FBFE),
+            Color(0xFFEAF6FB),
+          ],
+        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.92)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: const Color(0xFF072D56).withValues(alpha: 0.08),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          PositionedDirectional(
+            top: -38,
+            start: -34,
+            child: _buildSoftCircle(
+              size: 120,
+              color: const Color(0xFF24A9C4),
+              alpha: 0.08,
+            ),
+          ),
+          PositionedDirectional(
+            bottom: -46,
+            end: -38,
+            child: _buildSoftCircle(
+              size: 150,
+              color: const Color(0xFF0FA3A6),
+              alpha: 0.07,
+            ),
+          ),
+          Column(
+            children: <Widget>[
+              _buildTopLogo(theme),
+              const SizedBox(height: 10),
+              Text(
+                _copy('أهلًا بك في تـبـديــل', 'Welcome to Taapdeel'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF072D56),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                  height: 1.25,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSoftCircle({
+    required double size,
+    required Color color,
+    required double alpha,
+  }) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color.withValues(alpha: alpha),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileDataCard(
+      BuildContext context,
+      ThemeData theme,
+      ColorScheme colorScheme,
+      ItemLocationProvider locationProvider,
+      ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.92)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: const Color(0xFF072D56).withValues(alpha: 0.07),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: AlignmentDirectional.topStart,
+                    end: AlignmentDirectional.bottomEnd,
+                    colors: <Color>[
+                      Color(0xFF072D56),
+                      Color(0xFF0D5E7B),
+                      Color(0xFF24A9C4),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: const Color(0xFF0C587A).withValues(alpha: 0.14),
+                      blurRadius: 14,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.person_pin_circle_rounded,
+                  color: Colors.white,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      _copy('هنقدملك تجربة مخصصة لك', 'Let us personalize your experience'),
+                      style: const TextStyle(
+                        color: Color(0xFF072D56),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      _copy(
+                        'اختياراتك تساعدنا نقدملك نرشحيات منتجات مناسبة للتبديل.',
+                        'These choices help us suggest better swaps.',
+                      ),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF315A7A),
+                        fontWeight: FontWeight.w700,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FCFE),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: const Color(0xFF0C587A).withValues(alpha: 0.06),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                _buildGenderAgeRow(theme, colorScheme),
+                const SizedBox(height: 14),
+                Text(
+                  'profile_setup.location'.tr(),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: const Color(0xFF072D56),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 9),
+                _buildLocationRow(context, locationProvider),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwapPurposeCard(ThemeData theme) {
+    return _GlassInfoPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _buildSectionHeader(
+            icon: Icons.swap_horiz_rounded,
+            title: _copy('ما الذي ستفعله داخل تبديل؟', 'What will you do in Taapdeel?'),
+            subtitle: _copy(
+              'الفكرة بسيطة: أضف منتجاتك، وسنساعدك تكتشف فرص تبديل مناسبة.',
+              'The idea is simple: add your products and discover suitable swap opportunities.',
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildStepRow(
+            number: '1',
+            title: _copy('أضف منتجاتك غير المستخدمة', 'Add unused products'),
+            text: _copy(
+              'صوّر المنتج واكتب حالته بشكل واضح.',
+              'Upload the item and describe its condition clearly.',
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildStepRow(
+            number: '2',
+            title: _copy('نرشّح لك فرص تبديل مناسبة', 'Get suitable swap matches'),
+            text: _copy(
+              'حسب الاهتمامات، المكان، الفئة، والعائلة.',
+              'Based on interests, location, category, and family context.',
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildStepRow(
+            number: '3',
+            title: _copy('اختر الصفقة الأنسب لك', 'Choose the best deal'),
+            text: _copy(
+              'تواصل بثقة وبدّل المنتج بقيمة مفيدة.',
+              'Connect confidently and swap for useful value.',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepRow({
+    required String number,
+    required String title,
+    required String text,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.68),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFF0C587A).withValues(alpha: 0.07),
+        ),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: <Color>[Color(0xFF072D56), Color(0xFF0FA3A6)],
+              ),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Text(
+              number,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFF072D56),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  text,
+                  style: TextStyle(
+                    color: const Color(0xFF315A7A).withValues(alpha: 0.86),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11.5,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildSimpleInfoLine({
+    required IconData icon,
+    required String title,
+    required String text,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0FA3A6).withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(icon, color: const Color(0xFF0FA3A6), size: 18),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF072D56),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13.2,
+                  height: 1.25,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                text,
+                style: TextStyle(
+                  color: const Color(0xFF315A7A).withValues(alpha: 0.86),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11.8,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildSectionHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: AlignmentDirectional.topStart,
+              end: AlignmentDirectional.bottomEnd,
+              colors: <Color>[
+                Color(0xFF072D56),
+                Color(0xFF0D5E7B),
+                Color(0xFF24A9C4),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(17),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: const Color(0xFF0C587A).withValues(alpha: 0.16),
+                blurRadius: 14,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: Colors.white, size: 21),
+        ),
+        const SizedBox(width: 11),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF072D56),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15.5,
+                  height: 1.25,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: const Color(0xFF315A7A).withValues(alpha: 0.84),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12.2,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+
   Widget _buildTopLogo(ThemeData theme) {
     return Center(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-
-          child: Image.asset(
-            _logoAsset,
-            height: 60,
-            fit: BoxFit.contain,
-          ),
+      child: Container(
+        width: 58,
+        height: 58,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.95)),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: const Color(0xFF072D56).withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 9),
+            ),
+          ],
+        ),
+        child: Image.asset(
+          _logoAsset,
+          fit: BoxFit.contain,
         ),
       ),
     );
@@ -746,7 +1302,8 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
             children: <Widget>[
               Text(
                 'profile_setup.gender'.tr(),
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: const Color(0xFF072D56),
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -767,7 +1324,8 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
             children: <Widget>[
               Text(
                 'profile_setup.age_range'.tr(),
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: const Color(0xFF072D56),
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1062,13 +1620,11 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
 
   Future<void> _onGoIntroPressed(
       BuildContext context, ItemLocationProvider locationProvider) async {
-    if (!_validateProfileInputs(context, locationProvider)) {
-      return;
-    }
-
-    await _saveProfileInputs(locationProvider);
-
-    Navigator.pushReplacementNamed(context, RoutePaths.introSlider);
+    // Legacy helper kept for compatibility.
+    // The intro screen now appears before profile setup, so after saving
+    // profile data we continue to the next onboarding step instead of
+    // navigating back to intro.
+    await _onGoCategoryPressed(context, locationProvider);
   }
 
   Future<void> _onGoCategoryPressed(
@@ -1087,6 +1643,44 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
         'onBoarding': true,
         'Discover': false,
       },
+    );
+  }
+}
+class _GlassCard extends StatelessWidget {
+  const _GlassCard({
+    required this.child,
+    required this.padding,
+    required this.radius,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          width: double.infinity,
+          padding: padding,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.54),
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(color: Colors.white.withOpacity(0.82)),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: _C.petrol.withOpacity(0.045),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
     );
   }
 }

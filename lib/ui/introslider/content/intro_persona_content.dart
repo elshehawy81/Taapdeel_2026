@@ -2,7 +2,7 @@ import '../models/intro_models.dart';
 
 final Map<IntroPersonaKey, IntroPersonaModel> introPersonaContent = {
   IntroPersonaKey.male23Plus: IntroPersonaModel(
-    headerTitle: 'تبديل بيعرض منتجات تناسب اهتماماتك',
+    headerTitle: 'انت اغني مما تتخيل \n\n بيتك مليان حاجات غير مستخدمة',
     topBlock: const IntroBlockModel(
       title: 'صفقات أسرع… واختيارات أذكى',
       imageAsset: 'assets/images/products/01_mens_clothes.jpg',

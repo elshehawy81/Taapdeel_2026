@@ -5,8 +5,9 @@ class RoutePaths {
   static const String home = '/Discover';
   static const String introSlider = '/introSlider';
   static const String taapdeelProfileSetup = '/taapdeel_profile_setup';
+  static const String singleIntro = '/single_intro';
   static const String force_update = '/force_update';
-
+  static const String profileSetup = '/profile_setup';
   // --------------------------------------------------
   // Categories / products
   // --------------------------------------------------

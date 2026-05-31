@@ -856,7 +856,7 @@ class _HeaderBoxWidgetState extends State<HeaderBoxWidget> {
       final String tierLabel = () {
         final int tier = _toInt(badgesRemark['tier']);
         if (tier == 3) return 'سوبر';
-        if (tier == 2) return 'لقطة';
+        if (tier == 2) return 'لُقْطَة';
         if (tier == 1) return 'مميز';
         return '';
       }();

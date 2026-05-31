@@ -21,6 +21,7 @@ import 'package:taapdeel/ui/force_update/force_update_view.dart';
 import 'package:taapdeel/ui/history/list/history_list_container.dart';
 // Intro / Language
 import 'package:taapdeel/ui/introslider/intro_slider_view.dart';
+import 'package:taapdeel/ui/introslider/taapdeel_single_intro_view.dart';
 import 'package:taapdeel/ui/introslider/taapdeel_profile_setup_view.dart';
 
 // Item related screens
@@ -196,6 +197,24 @@ Route<dynamic> generateRoute(RouteSettings settings) {
         builder: (BuildContext context) => TaapdeelProfileSetupView(),
       );
 
+    case RoutePaths.singleIntro:
+      return MaterialPageRoute<dynamic>(
+        settings: const RouteSettings(name: RoutePaths.singleIntro),
+        builder: (BuildContext context) => TaapdeelSingleIntroView(
+          onStart: () {
+            Navigator.pushReplacementNamed(
+              context,
+              RoutePaths.profileSetup,
+            );
+          },
+        ),
+      );
+
+    case RoutePaths.profileSetup:
+      return MaterialPageRoute<dynamic>(
+        settings: const RouteSettings(name: RoutePaths.profileSetup),
+        builder: (BuildContext context) => const TaapdeelProfileSetupView(),
+      );
 
     case RoutePaths.login_container:
       return MaterialPageRoute<dynamic>(
@@ -309,7 +328,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
   // This route name suggests "itemEntryView" but currently opens ChatView.
   // Future Improvement: Review this route; may need to rename or redirect
   // to the correct item entry screen.
-   /*case RoutePaths.itemEntryView:
+  /*case RoutePaths.itemEntryView:
       return MaterialPageRoute<dynamic>(
         settings: const RouteSettings(name: RoutePaths.itemEntryView),
         builder: (BuildContext context) {
@@ -514,7 +533,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
   // ----------------------------------------------------------------------
 
 
-   /* case RoutePaths.chatImageDetailView:
+  /* case RoutePaths.chatImageDetailView:
       return MaterialPageRoute<dynamic>(
         builder: (BuildContext context) {
           final Message message = settings.arguments as Message;

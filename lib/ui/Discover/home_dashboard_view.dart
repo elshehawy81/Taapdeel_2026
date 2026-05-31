@@ -136,7 +136,7 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
     ),
     _WorldCardData(
       keyName: 'premium',
-      title: 'لقطة',
+      title: 'لُقْطَة',
       subtitle: 'أفضل الاختيارات',
       url: PsUrl.ps_premium_url,
       icon: Icons.local_offer_rounded,
