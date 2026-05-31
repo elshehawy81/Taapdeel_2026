@@ -361,7 +361,7 @@ class UserProvider extends PsProvider {
     final List<String> providers =
         await _firebaseAuth.fetchSignInMethodsForEmail(email);
 
-    final String provider = providers.single;
+    final String provider = providers.isNotEmpty ? providers.first : '';
     print('provider : $provider');
     // Registered With Email
     if (provider.contains(PsConst.emailAuthProvider) && !ignoreEmail) {
@@ -1148,7 +1148,7 @@ class UserProvider extends PsProvider {
       final List<String> providers =
           await _firebaseAuth.fetchSignInMethodsForEmail(email);
 
-      final String provider = providers.single;
+      final String provider = providers.isNotEmpty ? providers.first : '';
       print('provider : $provider');
       // Registered With Email
       if (provider.contains(PsConst.emailAuthProvider)) {

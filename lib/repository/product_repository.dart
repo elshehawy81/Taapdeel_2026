@@ -258,7 +258,7 @@ class ProductRepository extends PsRepository {
 
         int i = 0;
         if (existingMapList != null) {
-          i = existingMapList.data!.length + 1;
+          i = existingMapList.data!.length;
         }
         for (Product data in _resource.data!) {
           productMapList.add(ProductMap(
@@ -463,7 +463,7 @@ class ProductRepository extends PsRepository {
 
         int i = 0;
         if (existingMapList != null) {
-          i = existingMapList.data!.length + 1;
+          i = existingMapList.data!.length;
         }
         for (Product data in _resource.data!) {
           favouriteProductMapList.add(FavouriteProduct(
@@ -863,7 +863,7 @@ class ProductRepository extends PsRepository {
 
         int i = 0;
         if (existingMapList != null) {
-          i = existingMapList.data!.length + 1;
+          i = existingMapList.data!.length;
         }
         for (Product data in _resource.data!) {
           followerItemMapList.add(FollowerItem(
@@ -1249,7 +1249,7 @@ class ProductRepository extends PsRepository {
 
         int i = 0;
         if (existingMapList != null) {
-          i = existingMapList.data!.length + 1;
+          i = existingMapList.data!.length;
         }
         for (Product data in _resource.data!) {
           productMapList.add(ProductMap(

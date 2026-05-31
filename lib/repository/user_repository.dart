@@ -45,7 +45,8 @@ class UserRepository extends PsRepository {
 
   void sinkUserDetailStream(StreamController<PsResource<User?>>? userListStream,
       PsResource<User?> data) {
-    userListStream!.sink.add(data);
+    if (userListStream == null) return;
+    userListStream.sink.add(data);
   }
 
   void sinkUserLoginStream(

@@ -27,12 +27,28 @@ class _OfferSentListViewState extends State<OfferSentListView>
     with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   late OfferListProvider _offerListProvider;
+  bool _initialized = false;
 
   late AnimationController animationController;
   Animation<double>? animation;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      offerRepository = Provider.of<OfferRepository>(context, listen: false);
+      psValueHolder = Provider.of<PsValueHolder>(context, listen: false);
+      holder = OfferParameterHolder().getOfferSentList();
+      holder!.getOfferSentList().userId = psValueHolder.loginUserId;
+      _offerListProvider = OfferListProvider(repo: offerRepository);
+      _offerListProvider.loadOfferList(holder!);
+    }
+  }
+
+  @override
   void dispose() {
+    _offerListProvider.dispose();
     animationController.dispose();
     animation = null;
     super.dispose();
@@ -64,16 +80,8 @@ class _OfferSentListViewState extends State<OfferSentListView>
     holder = OfferParameterHolder().getOfferSentList();
     holder!.getOfferSentList().userId = psValueHolder.loginUserId;
 
-    offerRepository = Provider.of<OfferRepository>(context);
-
-    return ChangeNotifierProvider<OfferListProvider>(
-      lazy: false,
-      create: (BuildContext context) {
-        final OfferListProvider provider =
-            OfferListProvider(repo: offerRepository);
-        provider.loadOfferList(holder!);
-        return provider;
-      },
+    return ChangeNotifierProvider<OfferListProvider>.value(
+      value: _offerListProvider,
       child: Consumer<OfferListProvider>(builder:
           (BuildContext context, OfferListProvider provider, Widget? child) {
         if (provider.offerList.data != null &&

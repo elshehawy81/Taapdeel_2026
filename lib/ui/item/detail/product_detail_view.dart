@@ -106,6 +106,7 @@ class _ProductDetailState extends State<ProductDetailView>
 
   @override
   void dispose() {
+    animationController?.dispose();
     _swapChipsController.dispose();
     super.dispose();
   }

@@ -638,7 +638,7 @@ class PsApiService extends PsApi {
   Future<bool> markSweetMessageRead(
       Map<dynamic, dynamic> jsonMap) async {
     final String url =
-        '${PsConfig.ps_app_url}rest/Sweet_messages/get_received/api_key/${PsConfig.ps_api_key}';
+        '${PsConfig.ps_app_url}rest/Sweet_messages/mark_read/api_key/${PsConfig.ps_api_key}';
 
     final http.Response response = await http.post(
       Uri.parse(url),
@@ -1387,7 +1387,7 @@ class PsApiService extends PsApi {
       ) async {
     const String url = '${PsUrl.ps_chat_image_upload_url}';
 
-    return postUploadChatImage<DefaultPhoto, DefaultPhoto>(
+    return await postUploadChatImage<DefaultPhoto, DefaultPhoto>(
         DefaultPhoto(),
         url,
         'sender_id',

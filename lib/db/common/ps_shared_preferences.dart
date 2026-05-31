@@ -552,7 +552,7 @@ class PsSharedPreferences {
     await shared.setBool(PsConst.ISLANGUAGECONFIG,
         psMobileConfigSetting.isLanguageConfig == '1');
     await shared.setString(PsConst.DEFAULTLANGUAGE,
-        psMobileConfigSetting.defaultLanguage!.languageCode ?? 'en');
+        psMobileConfigSetting.defaultLanguage?.languageCode ?? 'en');
 
     loadValueHolder();
   }

@@ -132,7 +132,7 @@ class OfferRepository extends PsRepository {
             .getAll(finder: Finder(filter: Filter.equals(mapKey, paramKey)));
 
         int i = 0;
-        i = existingMapList.data!.length + 1;
+        i = existingMapList.data!.length;
         for (Offer data in _resource.data!) {
           offerMapList.add(OfferMap(
               id: data.id! + paramKey,

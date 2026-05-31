@@ -47,19 +47,29 @@ class _ProductListWithFilterViewState extends State<ProductListWithFilterView>
   PsValueHolder? valueHolder;
   late SearchBarWidget searchBar;
 
+  void _onScroll() {
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      final String? loginUserId = Utils.checkUserLoginId(valueHolder!);
+      _searchProductProvider!.nextProductListByKey(
+        loginUserId,
+        _searchProductProvider!.productParameterHolder,
+      );
+    }
+  }
+
   @override
   void initState() {
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels ==
-          _scrollController.position.maxScrollExtent) {
-        final String? loginUserId = Utils.checkUserLoginId(valueHolder!);
-        _searchProductProvider!.nextProductListByKey(
-          loginUserId,
-          _searchProductProvider!.productParameterHolder,
-        );
-      }
-    });
+    _scrollController.addListener(_onScroll);
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    searchTextController.dispose();
+    super.dispose();
   }
 
   @override

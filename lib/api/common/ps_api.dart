@@ -7,6 +7,7 @@ import 'package:taapdeel/api/common/ps_resource.dart';
 import 'package:taapdeel/api/common/ps_status.dart';
 import 'package:taapdeel/config/ps_config.dart';
 import 'package:taapdeel/viewobject/common/ps_object.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
 import 'package:path/path.dart';
@@ -86,8 +87,9 @@ abstract class PsApi {
               body: const JsonEncoder().convert(jsonMap))
           // ignore: body_might_complete_normally_catch_error
           .catchError((dynamic e) {
-        print('** Error Post Data');
-        print(e.error);
+        debugPrint('** Error Post Data');
+        debugPrint('$e');
+        return http.Response('{}', 500);
       });
 
       // print('Response : ${response.body}');
@@ -129,8 +131,9 @@ abstract class PsApi {
               body: const JsonEncoder().convert(jsonMap))
           // ignore: body_might_complete_normally_catch_error
           .catchError((dynamic e) {
-        print('** Error Post Data');
-        print(e.error);
+        debugPrint('** Error Post Data');
+        debugPrint('$e');
+        return http.Response('{}', 500);
       });
 
       final PsApiResponse psApiResponse = PsApiResponse(response);
@@ -237,7 +240,7 @@ abstract class PsApi {
             filename: basename(imageFile.path));
 
         request.fields[itemIdText] = itemId;
-        request.fields[imageIdText] = imageId!;
+        request.fields[imageIdText] = imageId ?? '';
         request.fields[orderingText] = orderingDesc;
         request.files.add(multipartFile);
         response = await request.send();
@@ -246,7 +249,7 @@ abstract class PsApi {
         final Uri uri = Uri.parse('${PsConfig.ps_app_url}$url');
         final MultipartRequest request = http.MultipartRequest('POST', uri);
         request.fields[itemIdText] = itemId;
-        request.fields[imageIdText] = imageId!;
+        request.fields[imageIdText] = imageId ?? '';
         request.fields[orderingText] = orderingDesc;
         response = await request.send();
       }
