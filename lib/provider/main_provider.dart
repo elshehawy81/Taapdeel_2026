@@ -156,8 +156,6 @@ class MainProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  late final OfferListViewAppBar? pageviewAppBar;
-
   /// Legacy secondary status tabs app bar.
   /// Keep only if there are still old screens using it.
   OfferListViewAppBar pageviewAppBarWidget(

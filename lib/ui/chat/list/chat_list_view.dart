@@ -31,13 +31,21 @@ class ChatListView extends StatefulWidget {
 class _ChatListViewState extends State<ChatListView> {
   late final PageController _pageController;
 
-  ChatBuyerListView? chatBuyerListView;
-  ChatSellerListView? chatSellerListView;
+  late final ChatBuyerListView chatBuyerListView;
+  late final ChatSellerListView chatSellerListView;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _selectedIndex);
+    chatBuyerListView = ChatBuyerListView(
+      animationController: widget.animationController,
+      provider: widget.buyerChatHistoryListProvider,
+    );
+    chatSellerListView = ChatSellerListView(
+      animationController: widget.animationController,
+      provider: widget.sellerChatHistoryListProvider,
+    );
   }
 
   @override
@@ -64,16 +72,6 @@ class _ChatListViewState extends State<ChatListView> {
 
   @override
   Widget build(BuildContext context) {
-    chatBuyerListView = ChatBuyerListView(
-      animationController: widget.animationController,
-      provider: widget.buyerChatHistoryListProvider,
-    );
-
-    chatSellerListView = ChatSellerListView(
-      animationController: widget.animationController,
-      provider: widget.sellerChatHistoryListProvider,
-    );
-
     return WillPopScope(
       onWillPop: () async {
         return Future<bool>.value(false);
@@ -91,8 +89,8 @@ class _ChatListViewState extends State<ChatListView> {
               child: PageView(
                 controller: _pageController,
                 children: <Widget>[
-                  chatSellerListView!,
-                  chatBuyerListView!,
+                  chatSellerListView,
+                  chatBuyerListView,
                 ],
                 onPageChanged: (int index) {
                   setState(() {

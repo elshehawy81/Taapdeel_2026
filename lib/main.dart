@@ -54,23 +54,12 @@ import 'viewobject/holder/noti_register_holder.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // ─────────────────────────────────────────────────────────────────────────
 
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  try {
-    await _initFirebaseCore();
-    final ChatHistoryIntentHolder chatData =
-    ChatHistoryIntentHolder.fromJson(message.data);
-  } catch (e) {}
-}
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await EasyLocalization.ensureInitialized();
   await _initFirebaseCore();
   await _initCrashlytics();
-
-  //FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   unawaited(_initLogger());
   unawaited(_initSharedPreferencesDefaults());
@@ -115,17 +104,6 @@ Future<void> _initSharedPreferencesDefaults() async {
 
 Future<void> _initScreenUtil() async {
   await ScreenUtil.ensureScreenSize();
-}
-
-Future<void> _initPaymob() async {
-  try {
-    await FlutterPaymob.instance.initialize(
-      apiKey: PaymobConsts.apiKey,
-      integrationID: PaymobConsts.cardIntegrationId,
-      walletIntegrationId: PaymobConsts.walletIntegrationId,
-      iFrameID: PaymobConsts.iFrame,
-    );
-  } catch (e) {}
 }
 
 Future<void> _initFirebaseCore() async {
@@ -275,20 +253,6 @@ void _routeNotificationMessage(RemoteMessage message) {
       );
     } catch (e) {}
   });
-}
-
-Future<void> _initMobileAds() async {
-  await MobileAds.instance.initialize();
-}
-
-Future<void> _checkAppleSignIn() async {
-  await Utils.checkAppleSignInAvailable();
-}
-
-Future<void> _initCameras() async {
-  try {
-    Utils.cameras = await availableCameras();
-  } catch (e) {}
 }
 
 void _configLoading() {
@@ -614,8 +578,6 @@ class _AppServicesBootstrapState extends State<_AppServicesBootstrap> {
       );
     }
 
-    // مش ضروري في cold start إلا لو أنت محتاجه فعلًا
-    // unawaited(_checkAppleSignIn());
   }
 
   @override

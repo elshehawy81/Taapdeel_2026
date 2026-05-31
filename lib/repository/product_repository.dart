@@ -73,8 +73,9 @@ class ProductRepository extends PsRepository {
   void sinkItemDetailStream(
       StreamController<PsResource<Product?>>? itemDetailStream,
       PsResource<Product?> data) {
+    if (itemDetailStream == null) return;
     if (data != null) {
-      itemDetailStream!.sink.add(data);
+      itemDetailStream.sink.add(data);
     }
   }
 
@@ -309,7 +310,8 @@ class ProductRepository extends PsRepository {
           onDataUpdated: (Product? product) {
             if (status != null && status != PsStatus.NOACTION) {
               print(status);
-              itemDetailStream!.sink
+              if (itemDetailStream == null) return;
+              itemDetailStream.sink
                   .add(PsResource<Product>(status, '', product));
             } else {
               print('No Action');

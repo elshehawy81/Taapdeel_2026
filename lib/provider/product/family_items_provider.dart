@@ -1,7 +1,6 @@
 // ignore_for_file: unnecessary_null_comparison
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:taapdeel/api/common/ps_resource.dart';

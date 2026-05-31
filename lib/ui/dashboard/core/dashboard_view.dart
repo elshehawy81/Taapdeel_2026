@@ -544,15 +544,15 @@ class _HomeViewState extends State<DashboardView>
 
   @override
   Widget build(BuildContext context) {
-    categoryRepository = Provider.of<CategoryRepository>(context);
-    userRepository = Provider.of<UserRepository>(context);
-    appInfoRepository = Provider.of<AppInfoRepository>(context);
+    categoryRepository = Provider.of<CategoryRepository>(context, listen: false);
+    userRepository = Provider.of<UserRepository>(context, listen: false);
+    appInfoRepository = Provider.of<AppInfoRepository>(context, listen: false);
     valueHolder = Provider.of<PsValueHolder>(context);
-    productRepository = Provider.of<ProductRepository>(context);
-    deleteTaskRepository = Provider.of<DeleteTaskRepository>(context);
+    productRepository = Provider.of<ProductRepository>(context, listen: false);
+    deleteTaskRepository = Provider.of<DeleteTaskRepository>(context, listen: false);
     userUnreadMessageRepository =
-        Provider.of<UserUnreadMessageRepository>(context);
-    notificationRepository = Provider.of<NotificationRepository>(context);
+        Provider.of<UserUnreadMessageRepository>(context, listen: false);
+    notificationRepository = Provider.of<NotificationRepository>(context, listen: false);
     userUnreadMessageProvider ??=
         Provider.of<UserUnreadMessageProvider?>(context, listen: false);
     buyerListProvider ??=
@@ -561,7 +561,7 @@ class _HomeViewState extends State<DashboardView>
         Provider.of<SellerChatHistoryListProvider?>(context, listen: false);
 
     psValueHolder = Provider.of<PsValueHolder>(context);
-    chatHistoryRepository = Provider.of<ChatHistoryRepository>(context);
+    chatHistoryRepository = Provider.of<ChatHistoryRepository>(context, listen: false);
 
     timeDilation = 1.0;
 

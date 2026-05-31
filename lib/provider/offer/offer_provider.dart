@@ -23,7 +23,7 @@ class OfferListProvider extends PsProvider {
 
     subscription =
         offerListStream!.stream.listen((PsResource<List<Offer>> resource) {
-      updateOffset(resource.data!.length);
+      updateOffset(resource.data?.length ?? 0);
 
       _offerList = resource;
 

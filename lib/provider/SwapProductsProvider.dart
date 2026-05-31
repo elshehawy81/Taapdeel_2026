@@ -4,7 +4,6 @@ import 'dart:developer';
 import 'package:flutter/cupertino.dart';
 import 'package:taapdeel/repository/Common/ps_repository.dart';
 import 'package:taapdeel/viewobject/product.dart';
-import 'package:http/http.dart';
 import 'package:http/http.dart' as http;
 
 import '../api/ps_url.dart';
@@ -236,29 +235,8 @@ class SwapProductsProvider extends PsRepository {
     });
 
     log('url -> ${'${PsConfig.ps_app_url}$url'} \nResponse -> ${response.body}');
-    approveOffer(jsonMap);
+    await approveOffer(jsonMap);
     return response.statusCode == 200 ? 'success' : 'failed';
-  }
-
-  String statusString(BuildContext context, String type) {
-    String status = '';
-
-    switch (type) {
-      case PsConst.REQUEST_PENDING:
-        status = Utils.getString(context, 'request_pending');
-        break;
-      case PsConst.REQUEST_ACCEPTED:
-        status = Utils.getString(context, 'request_accepted');
-        break;
-      case PsConst.REQUEST_SWAPPED:
-        status = Utils.getString(context, 'request_swapped');
-        break;
-      case PsConst.REQUEST_REJECTED:
-        status = Utils.getString(context, 'request_rejected');
-        break;
-    }
-
-    return status;
   }
 
   Future<String> approveOffer(Map<String, dynamic> jsonMap) async {
