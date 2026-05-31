@@ -325,6 +325,35 @@ class PSApp extends StatefulWidget {
 }
 
 class _PSAppState extends State<PSApp> {
+  late final ItemPromotionProvider _itemPromotionProvider;
+  late final MainProvider _mainProvider;
+  late final HomeProvider _homeProvider;
+  late final SearchProvider _searchProvider;
+  late final MainBuyerProvider _mainBuyerProvider;
+  late final PaymentProvider _paymentProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _itemPromotionProvider = ItemPromotionProvider();
+    _mainProvider = MainProvider();
+    _homeProvider = HomeProvider();
+    _searchProvider = SearchProvider();
+    _mainBuyerProvider = MainBuyerProvider();
+    _paymentProvider = PaymentProvider();
+  }
+
+  @override
+  void dispose() {
+    _itemPromotionProvider.dispose();
+    _mainProvider.dispose();
+    _homeProvider.dispose();
+    _searchProvider.dispose();
+    _mainBuyerProvider.dispose();
+    _paymentProvider.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     PsColors.loadColor(context);
@@ -343,29 +372,23 @@ class _PSAppState extends State<PSApp> {
         themedWidgetBuilder: (BuildContext context, ThemeData theme) {
           return MultiProvider(
             providers: <SingleChildWidget>[
-              ChangeNotifierProvider<ItemPromotionProvider>(
-                lazy: true,
-                create: (BuildContext context) => ItemPromotionProvider(),
+              ChangeNotifierProvider<ItemPromotionProvider>.value(
+                value: _itemPromotionProvider,
               ),
-              ChangeNotifierProvider<MainProvider>(
-                lazy: true,
-                create: (BuildContext context) => MainProvider(),
+              ChangeNotifierProvider<MainProvider>.value(
+                value: _mainProvider,
               ),
-              ChangeNotifierProvider<HomeProvider>(
-                lazy: true,
-                create: (BuildContext context) => HomeProvider(),
+              ChangeNotifierProvider<HomeProvider>.value(
+                value: _homeProvider,
               ),
-              ChangeNotifierProvider<SearchProvider>(
-                lazy: true,
-                create: (BuildContext context) => SearchProvider(),
+              ChangeNotifierProvider<SearchProvider>.value(
+                value: _searchProvider,
               ),
-              ChangeNotifierProvider<MainBuyerProvider>(
-                lazy: true,
-                create: (BuildContext context) => MainBuyerProvider(),
+              ChangeNotifierProvider<MainBuyerProvider>.value(
+                value: _mainBuyerProvider,
               ),
-              ChangeNotifierProvider<PaymentProvider>(
-                lazy: true,
-                create: (BuildContext context) => PaymentProvider(),
+              ChangeNotifierProvider<PaymentProvider>.value(
+                value: _paymentProvider,
               ),
             ],
             child: _AppServicesBootstrap(

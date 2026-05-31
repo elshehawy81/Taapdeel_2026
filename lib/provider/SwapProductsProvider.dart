@@ -186,6 +186,7 @@ class SwapProductsProvider extends PsRepository {
         .catchError((dynamic e) {
       debugPrint('** Error Post Data');
       debugPrint('$e');
+      return http.Response('{}', 500);
     });
 
     log('add -> url -> ${'${PsConfig.ps_app_url}$url'} \nResponse -> ${response.body}');
@@ -212,6 +213,7 @@ class SwapProductsProvider extends PsRepository {
         .catchError((dynamic e) {
       debugPrint('** Error Post Data');
       debugPrint('$e');
+      return http.Response('{}', 500);
     });
 
     log('url -> ${'${PsConfig.ps_app_url}$url'} \nResponse -> ${response.body}');
@@ -219,7 +221,7 @@ class SwapProductsProvider extends PsRepository {
   }
 
   Future<String> approveRequest(Map<String, dynamic> jsonMap) async {
-    const String url = '${PsUrl.ps_rejected_offer_url}';
+    const String url = '${PsUrl.ps_accepted_offer_url}';
 
     final Response response = await http
         .post(
@@ -230,6 +232,7 @@ class SwapProductsProvider extends PsRepository {
         .catchError((dynamic e) {
       debugPrint('** Error Post Data');
       debugPrint('$e');
+      return http.Response('{}', 500);
     });
 
     log('url -> ${'${PsConfig.ps_app_url}$url'} \nResponse -> ${response.body}');

@@ -435,7 +435,7 @@ class UserRepository extends PsRepository {
           await _psApiService.getUserDetail(jsonMap);
 
       if (_resource.status == PsStatus.SUCCESS) {
-        await _userDao.deleteAll();
+        await _userDao.deleteWithFinder(finder);
         await _userDao.insert(_userPrimaryKey, _resource.data!);
         sinkUserDetailStream(
             userListStream, await _userDao.getOne(finder: finder));

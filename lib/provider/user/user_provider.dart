@@ -835,7 +835,7 @@ class UserProvider extends PsProvider {
       /// Get Firebase User with Email Id Login
       ///
 
-      await signInWithEmailAndPassword(context, email, email);
+      await signInWithEmailAndPassword(context, email, password);
 
       ///
       /// Show Progress Dialog
@@ -996,7 +996,7 @@ class UserProvider extends PsProvider {
         /// Get Firebase User with Email Id Login
         ///
         final fb_auth.User? firebaseUser =
-            await createUserWithEmailAndPassword(context, email, email);
+            await createUserWithEmailAndPassword(context, email, password);
 
         if (firebaseUser != null) {
           ///
@@ -1153,7 +1153,7 @@ class UserProvider extends PsProvider {
       // Registered With Email
       if (provider.contains(PsConst.emailAuthProvider)) {
         final fb_auth.User? user =
-            await signInWithEmailAndPassword(context, email, email);
+            await signInWithEmailAndPassword(context, email, password);
 
         if (user == null) {
           if (!ignoreHandleFirebaseAuthError) {

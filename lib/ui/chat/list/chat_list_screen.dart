@@ -53,9 +53,18 @@ class _ChatListScreenState extends State<ChatListScreen>
 
     animationController =
         AnimationController(duration: PsConfig.animation_duration, vsync: this);
+    animationControllerForFab =
+        AnimationController(duration: PsConfig.animation_duration, vsync: this);
     animation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
         parent: animationController,
         curve: const Interval(0.5 * 1, 1.0, curve: Curves.fastOutSlowIn)));
+  }
+
+  @override
+  void dispose() {
+    animationController.dispose();
+    animationControllerForFab.dispose();
+    super.dispose();
   }
 
   @override
