@@ -7,8 +7,6 @@ import 'package:taapdeel/utils/utils.dart';
 
 import '../../../constant/ps_dimens.dart';
 
-int _selectedIndex = 0;
-
 class OfferListView extends StatefulWidget {
   const OfferListView({
     Key? key,
@@ -20,8 +18,20 @@ class OfferListView extends StatefulWidget {
 }
 
 class _OfferListViewState extends State<OfferListView> {
-  final PageController _pageController =
-      PageController(initialPage: _selectedIndex);
+  int _selectedIndex = 0;
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     final OfferListViewAppBar pageviewAppBar = OfferListViewAppBar(

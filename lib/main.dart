@@ -148,9 +148,6 @@ Future<void> _initFirebaseCore() async {
       await Firebase.initializeApp();
     }
 
-    final FirebaseApp firebaseApp = Firebase.app();
-
-
   } on FirebaseException catch (e) {
     if (e.code == 'duplicate-app') {
       return;

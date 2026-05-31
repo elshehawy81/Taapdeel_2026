@@ -5,15 +5,6 @@ import '../../constant/ps_constants.dart';
 import '../../db/common/ps_shared_preferences.dart';
 import 'dart:ui';
 
-/*
-Card Number	5123456789012346
-
-Expiry Month	12
-Expiry Year	25
-CVV	123
-
-*/
-
 class PaymentConsts {
   static const Color grayColor = Color(0x15505050);
   static const Color yellowColor = Color(0xffFFD35A);
@@ -29,8 +20,6 @@ class PaymentConsts {
       .getString(PsConst.VALUE_HOLDER__USER_ID)!;
 
   static var screenUtilSize = Size(393, 830);
-      //'usr5891e79d9a1d3ec87d541802db79dacd';
-  //'usrc4671476b2872f12ec4e5848d0619b6b';
 
   static String congratsAnimation = 'assets/animations/celebratAnimation.json';
 }

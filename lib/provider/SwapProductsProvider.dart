@@ -184,8 +184,8 @@ class SwapProductsProvider extends PsRepository {
       body: const JsonEncoder().convert(jsonMap),
     )
         .catchError((dynamic e) {
-      print('** Error Post Data');
-      print(e.error);
+      debugPrint('** Error Post Data');
+      debugPrint('$e');
     });
 
     log('add -> url -> ${'${PsConfig.ps_app_url}$url'} \nResponse -> ${response.body}');
@@ -210,8 +210,8 @@ class SwapProductsProvider extends PsRepository {
       body: const JsonEncoder().convert(jsonMap),
     )
         .catchError((dynamic e) {
-      print('** Error Post Data');
-      print(e.error);
+      debugPrint('** Error Post Data');
+      debugPrint('$e');
     });
 
     log('url -> ${'${PsConfig.ps_app_url}$url'} \nResponse -> ${response.body}');
@@ -228,8 +228,8 @@ class SwapProductsProvider extends PsRepository {
       body: const JsonEncoder().convert(jsonMap),
     )
         .catchError((dynamic e) {
-      print('** Error Post Data');
-      print(e.error);
+      debugPrint('** Error Post Data');
+      debugPrint('$e');
     });
 
     log('url -> ${'${PsConfig.ps_app_url}$url'} \nResponse -> ${response.body}');
@@ -329,11 +329,11 @@ class SwapProductsProvider extends PsRepository {
 
   Future<String?> decrementSwapBalance(String userId) async {
     try {
-      print('SWAP START');
+      debugPrint('SWAP START');
       const String url =
           '${PsConfig.ps_app_url}${PsUrl.ps_swap_balance_decrease_url}';
 
-      print('SWAP User: ');
+      debugPrint('SWAP User: ');
 
       final http.Response response = await http.post(
         Uri.parse(url),
@@ -344,23 +344,23 @@ class SwapProductsProvider extends PsRepository {
         body: jsonEncode(<String, dynamic>{'user_id': userId}),
       );
 
-      print('Decrement Swap');
-      print(jsonDecode(response.body));
+      debugPrint('Decrement Swap');
+      debugPrint(jsonDecode(response.body).toString());
 
       return jsonDecode(response.body)['status'];
     } catch (e) {
-      print('SWAP $e');
+      debugPrint('SWAP $e');
     }
     return null;
   }
 
   Future<String?> incrementSwapNumber(String userId) async {
     try {
-      print('SWAP START');
+      debugPrint('SWAP START');
       const String url =
           '${PsConfig.ps_app_url}${PsUrl.ps_swap_no_increase_url}';
 
-      print('SWAP User: ');
+      debugPrint('SWAP User: ');
 
       final http.Response response = await http.post(
         Uri.parse(url),
@@ -373,18 +373,18 @@ class SwapProductsProvider extends PsRepository {
 
       return jsonDecode(response.body)['status'];
     } catch (e) {
-      print('SWAP $e');
+      debugPrint('SWAP $e');
     }
     return null;
   }
 
   Future<String?> incrementSwapBalance(String userId) async {
     try {
-      print('SWAP START');
+      debugPrint('SWAP START');
       const String url =
           '${PsConfig.ps_app_url}${PsUrl.ps_swap_balance_increase_url}';
 
-      print('SWAP User: ');
+      debugPrint('SWAP User: ');
 
       final http.Response response = await http.post(
         Uri.parse(url),
@@ -397,18 +397,18 @@ class SwapProductsProvider extends PsRepository {
 
       return jsonDecode(response.body)['status'];
     } catch (e) {
-      print('SWAP $e');
+      debugPrint('SWAP $e');
     }
     return null;
   }
 
   Future<String?> incrementUserPoints10(String userId) async {
     try {
-      print('SWAP START');
+      debugPrint('SWAP START');
       const String url =
           '${PsConfig.ps_app_url}${PsUrl.ps_points_increase10_url}';
 
-      print('SWAP User: ');
+      debugPrint('SWAP User: ');
 
       final http.Response response = await http.post(
         Uri.parse(url),
@@ -421,7 +421,7 @@ class SwapProductsProvider extends PsRepository {
 
       return jsonDecode(response.body)['status'];
     } catch (e) {
-      print('SWAP $e');
+      debugPrint('SWAP $e');
     }
     return null;
   }
