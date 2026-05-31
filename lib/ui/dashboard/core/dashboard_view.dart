@@ -732,9 +732,9 @@ class _HomeViewState extends State<DashboardView>
             child: Scaffold(
               key: scaffoldKey,
               drawer: DashboardDrawer(
-                userRepository: Provider.of<UserRepository>(context),
+                userRepository: Provider.of<UserRepository>(context, listen: false),
                 deleteTaskRepository:
-                Provider.of<DeleteTaskRepository>(context),
+                Provider.of<DeleteTaskRepository>(context, listen: false),
                 valueHolder: valueHolder,
                 onSelectIndex: (title, index) {
                   setState(() => _currentIndex = index);

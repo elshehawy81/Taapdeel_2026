@@ -78,7 +78,7 @@ String psPickUserAvatarAsset({
 /// - fallback order: requested thumbnail -> 1x thumbnail -> spinner/asset
 /// ===============================================================
 Widget _psThumbPlaceholder({
-  required PsValueHolder psValueHolder,
+  required bool isUseThumbnail,
   required double? width,
   required double? height,
   required BoxFit fit,
@@ -86,7 +86,7 @@ Widget _psThumbPlaceholder({
   required String fallbackThumb1xUrl,
   Widget? finalFallback,
 }) {
-  if (!(psValueHolder.isUseThumbnailAsPlaceHolder ?? false)) {
+  if (!isUseThumbnail) {
     return const PsSquareProgressWidget();
   }
 
@@ -166,7 +166,8 @@ class _PsNetworkImageState extends State<PsNetworkImage> {
 
   @override
   Widget build(BuildContext context) {
-    final PsValueHolder psValueHolder = Provider.of<PsValueHolder>(context);
+    final bool isUseThumbnail = context.select<PsValueHolder, bool>(
+        (vh) => vh.isUseThumbnailAsPlaceHolder ?? false);
 
     width = (widget.width == double.infinity) ? MediaQuery.of(context).size.width : widget.width;
     height = (widget.height == double.infinity) ? MediaQuery.of(context).size.height : widget.height;
@@ -200,7 +201,7 @@ class _PsNetworkImageState extends State<PsNetworkImage> {
         child: CachedNetworkImage(
           placeholder: (BuildContext context, String url) {
             return _psThumbPlaceholder(
-              psValueHolder: psValueHolder,
+              isUseThumbnail: isUseThumbnail,
               width: width,
               height: height,
               fit: widget.boxfit,
@@ -258,7 +259,8 @@ class _PsNetworkImageWithUrlState extends State<PsNetworkImageWithUrl> {
 
   @override
   Widget build(BuildContext context) {
-    final PsValueHolder psValueHolder = Provider.of<PsValueHolder>(context);
+    final bool isUseThumbnail = context.select<PsValueHolder, bool>(
+        (vh) => vh.isUseThumbnailAsPlaceHolder ?? false);
 
     width = (widget.width == double.infinity) ? MediaQuery.of(context).size.width : widget.width;
     height = (widget.height == double.infinity) ? MediaQuery.of(context).size.height : widget.height;
@@ -285,7 +287,7 @@ class _PsNetworkImageWithUrlState extends State<PsNetworkImageWithUrl> {
       child: CachedNetworkImage(
         placeholder: (BuildContext context, String url) {
           return _psThumbPlaceholder(
-            psValueHolder: psValueHolder,
+            isUseThumbnail: isUseThumbnail,
             width: width,
             height: height,
             fit: widget.boxfit,
@@ -352,7 +354,8 @@ class _PsNetworkImageWithUrlForUserState extends State<PsNetworkImageWithUrlForU
 
   @override
   Widget build(BuildContext context) {
-    final PsValueHolder psValueHolder = Provider.of<PsValueHolder>(context);
+    final bool isUseThumbnail = context.select<PsValueHolder, bool>(
+        (vh) => vh.isUseThumbnailAsPlaceHolder ?? false);
 
     width = (widget.width == double.infinity) ? MediaQuery.of(context).size.width : widget.width;
     height = (widget.height == double.infinity) ? MediaQuery.of(context).size.height : widget.height;
@@ -381,7 +384,7 @@ class _PsNetworkImageWithUrlForUserState extends State<PsNetworkImageWithUrlForU
       child: CachedNetworkImage(
         placeholder: (BuildContext context, String url) {
           return _psThumbPlaceholder(
-            psValueHolder: psValueHolder,
+            isUseThumbnail: isUseThumbnail,
             width: width,
             height: height,
             fit: widget.boxfit,
@@ -481,7 +484,8 @@ class _PsNetworkCircleImageState extends State<PsNetworkCircleImage> {
 
   @override
   Widget build(BuildContext context) {
-    final PsValueHolder psValueHolder = Provider.of<PsValueHolder>(context);
+    final bool isUseThumbnail = context.select<PsValueHolder, bool>(
+        (vh) => vh.isUseThumbnailAsPlaceHolder ?? false);
 
     width = (widget.width == double.infinity) ? MediaQuery.of(context).size.width : widget.width;
     height = (widget.height == double.infinity) ? MediaQuery.of(context).size.height : widget.height;
@@ -529,7 +533,7 @@ class _PsNetworkCircleImageState extends State<PsNetworkCircleImage> {
         // For circle widgets, we only have 1x thumbs in original code.
         // Still safe: if thumb missing -> spinner instead of X.
         return _psThumbPlaceholder(
-          psValueHolder: psValueHolder,
+          isUseThumbnail: isUseThumbnail,
           width: width,
           height: height,
           fit: widget.boxfit,
@@ -614,7 +618,8 @@ class _PsNetworkCircleImageForUserState extends State<PsNetworkCircleImageForUse
 
   @override
   Widget build(BuildContext context) {
-    final PsValueHolder psValueHolder = Provider.of<PsValueHolder>(context);
+    final bool isUseThumbnail = context.select<PsValueHolder, bool>(
+        (vh) => vh.isUseThumbnailAsPlaceHolder ?? false);
 
     width = (widget.width == double.infinity) ? MediaQuery.of(context).size.width : widget.width;
     height = (widget.height == double.infinity) ? MediaQuery.of(context).size.height : widget.height;
@@ -661,7 +666,7 @@ class _PsNetworkCircleImageForUserState extends State<PsNetworkCircleImageForUse
     Widget image = CachedNetworkImage(
       placeholder: (BuildContext context, String url) {
         return _psThumbPlaceholder(
-          psValueHolder: psValueHolder,
+          isUseThumbnail: isUseThumbnail,
           width: width,
           height: height,
           fit: widget.boxfit,
@@ -850,7 +855,8 @@ class _PsNetworkCircleIconImageState extends State<PsNetworkCircleIconImage> {
 
   @override
   Widget build(BuildContext context) {
-    final PsValueHolder psValueHolder = Provider.of<PsValueHolder>(context);
+    final bool isUseThumbnail = context.select<PsValueHolder, bool>(
+        (vh) => vh.isUseThumbnailAsPlaceHolder ?? false);
 
     width = (widget.width == double.infinity) ? MediaQuery.of(context).size.width : widget.width;
     height = (widget.height == double.infinity) ? MediaQuery.of(context).size.height : widget.height;
@@ -877,7 +883,7 @@ class _PsNetworkCircleIconImageState extends State<PsNetworkCircleIconImage> {
     final Widget img = CachedNetworkImage(
       placeholder: (BuildContext context, String url) {
         return _psThumbPlaceholder(
-          psValueHolder: psValueHolder,
+          isUseThumbnail: isUseThumbnail,
           width: width,
           height: height,
           fit: widget.boxfit,
