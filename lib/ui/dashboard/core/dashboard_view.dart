@@ -433,6 +433,7 @@ class _HomeViewState extends State<DashboardView>
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _homeSearchCtrl.dispose();
     _homeSearchFocusNode.dispose();
     animationController.dispose();

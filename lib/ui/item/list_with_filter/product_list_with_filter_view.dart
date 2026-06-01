@@ -120,14 +120,15 @@ class _ProductListWithFilterViewState extends State<ProductListWithFilterView>
                     children: <Widget>[
                       // ✅ fix: null-check الأول
                       if (list != null && list.isNotEmpty)
-                        Container(
-                          color: PsColors.baseColor,
-                          margin: const EdgeInsets.only(
-                            left: PsDimens.space8,
-                            right: PsDimens.space8,
-                            top: PsDimens.space4,
-                            bottom: PsDimens.space4,
-                          ),
+                        Positioned.fill(
+                          child: Container(
+                            color: PsColors.baseColor,
+                            margin: const EdgeInsets.only(
+                              left: PsDimens.space8,
+                              right: PsDimens.space8,
+                              top: PsDimens.space4,
+                              bottom: PsDimens.space4,
+                            ),
                           child: RefreshIndicator(
                             onRefresh: () {
                               final String? loginUserId =
@@ -141,7 +142,7 @@ class _ProductListWithFilterViewState extends State<ProductListWithFilterView>
                               controller: _scrollController,
                               physics: const AlwaysScrollableScrollPhysics(),
                               scrollDirection: Axis.vertical,
-                              shrinkWrap: true,
+                              cacheExtent: 500,
                               slivers: <Widget>[
                                 SliverGrid(
                                   gridDelegate:
@@ -190,6 +191,7 @@ class _ProductListWithFilterViewState extends State<ProductListWithFilterView>
                                 ),
                               ],
                             ),
+                          ),
                           ),
                         )
                       else if (provider.productList.status !=

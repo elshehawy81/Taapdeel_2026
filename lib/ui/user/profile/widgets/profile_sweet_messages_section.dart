@@ -1007,34 +1007,37 @@ class _ReplyBottomSheetBodyState extends State<_ReplyBottomSheetBody>
       }
     });
 
-    _tabController.addListener(() async {
-      if (_tabController.indexIsChanging) {
-        return;
-      }
+    _tabController.addListener(_onTabChanged);
+  }
 
-      if (!mounted) {
-        return;
-      }
+  Future<void> _onTabChanged() async {
+    if (_tabController.indexIsChanging) {
+      return;
+    }
 
-      setState(() {});
+    if (!mounted) {
+      return;
+    }
 
-      final SweetMessageProvider provider =
-      Provider.of<SweetMessageProvider>(context, listen: false);
+    setState(() {});
 
-      if (provider.messageCategory == _currentCategory) {
-        return;
-      }
+    final SweetMessageProvider provider =
+    Provider.of<SweetMessageProvider>(context, listen: false);
 
-      provider.setMessageCategory(_currentCategory);
-      await provider.loadPhraseSuggestions(
-        loginUserId: widget.loginUserId,
-        receiverUserId: widget.receiverUserId,
-      );
-    });
+    if (provider.messageCategory == _currentCategory) {
+      return;
+    }
+
+    provider.setMessageCategory(_currentCategory);
+    await provider.loadPhraseSuggestions(
+      loginUserId: widget.loginUserId,
+      receiverUserId: widget.receiverUserId,
+    );
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }

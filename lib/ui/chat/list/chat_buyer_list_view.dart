@@ -58,10 +58,21 @@ class _ChatBuyerListViewState extends State<ChatBuyerListView>
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     animationController.dispose();
     animation = null;
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!mounted) return;
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      holder!.getBuyerHistoryList().userId = psValueHolder.loginUserId;
+      provider.resetShowProgress(true);
+      provider.nextChatHistoryList(holder);
+    }
   }
 
   @override
@@ -78,14 +89,7 @@ class _ChatBuyerListViewState extends State<ChatBuyerListView>
       holder = ChatHistoryParameterHolder().getBuyerHistoryList();
       holder!.getBuyerHistoryList().userId = psValueHolder.loginUserId;
 
-      _scrollController.addListener(() {
-        if (_scrollController.position.pixels ==
-            _scrollController.position.maxScrollExtent) {
-          holder!.getBuyerHistoryList().userId = psValueHolder.loginUserId;
-          provider.resetShowProgress(true);
-          provider.nextChatHistoryList(holder);
-        }
-      });
+      _scrollController.addListener(_onScroll);
 
       MainBuyerProvider.of(context, listen: false).getSentList(context, provider);
       MainBuyerProvider.of(context, listen: false).resetindex();
