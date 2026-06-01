@@ -176,7 +176,7 @@ class SwapProductsProvider extends PsRepository {
   Future<String> addPriceOffer(Map<dynamic, dynamic> jsonMap) async {
     const String url = '${PsUrl.ps_add_chat_history_url}';
 
-    final Response response = await http
+    final http.Response response = await http
         .post(
       Uri.parse('${PsConfig.ps_app_url}$url'),
       headers: <String, String>{'content-type': 'application/json'},
@@ -203,7 +203,7 @@ class SwapProductsProvider extends PsRepository {
   Future<String> rejectOffer(Map<dynamic, dynamic> jsonMap) async {
     const String url = '${PsUrl.ps_rejected_offer_url}';
 
-    final Response response = await http
+    final http.Response response = await http
         .post(
       Uri.parse('${PsConfig.ps_app_url}$url'),
       headers: <String, String>{'content-type': 'application/json'},
@@ -222,7 +222,7 @@ class SwapProductsProvider extends PsRepository {
   Future<String> approveRequest(Map<String, dynamic> jsonMap) async {
     const String url = '${PsUrl.ps_accepted_offer_url}';
 
-    final Response response = await http
+    final http.Response response = await http
         .post(
       Uri.parse('${PsConfig.ps_app_url}$url'),
       headers: <String, String>{'content-type': 'application/json'},
