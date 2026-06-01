@@ -88,7 +88,8 @@ class ProductRepository extends PsRepository {
   }
 
   Future<dynamic> insert(Product? product) async {
-    return _productDao.insert(primaryKey, product!);
+    if (product == null) return;
+    return _productDao.insert(primaryKey, product);
   }
 
   Future<dynamic> update(Product product) async {

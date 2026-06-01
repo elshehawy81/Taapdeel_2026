@@ -677,9 +677,9 @@ class PsApiService extends PsApi {
 
     final Map<String, dynamic> jsonMap = jsonDecode(response.body);
 
-    if (jsonMap['status'] == 'ok' && jsonMap['data'] != null) {
+    if (jsonMap['status'] == 'ok' && jsonMap['data'] is Map<String, dynamic>) {
       final OwnerRelation relation =
-      OwnerRelation().fromMap(jsonMap['data']);
+      OwnerRelation().fromMap(jsonMap['data'] as Map<String, dynamic>);
 
       return PsResource<OwnerRelation>(
         PsStatus.SUCCESS,
@@ -1025,16 +1025,13 @@ class PsApiService extends PsApi {
 
 
 
-    final http.Response response = await http.post(
-      Uri.parse(url),
-      body: jsonMap.map(
-            (key, value) => MapEntry(key.toString(), value.toString()),
-      ),
-    );
-
-
-
     try {
+      final http.Response response = await http.post(
+        Uri.parse(url),
+        body: jsonMap.map(
+              (key, value) => MapEntry(key.toString(), value.toString()),
+        ),
+      );
       final dynamic decoded = jsonDecode(response.body);
 
       // ✅ Case 1: API returns raw list directly

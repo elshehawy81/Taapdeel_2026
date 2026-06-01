@@ -56,7 +56,8 @@ class UserRepository extends PsRepository {
   }
 
   Future<dynamic> insert(User? user) async {
-    return _userDao.insert(_userPrimaryKey, user!);
+    if (user == null) return;
+    return _userDao.insert(_userPrimaryKey, user);
   }
 
   Future<dynamic> update(User user) async {

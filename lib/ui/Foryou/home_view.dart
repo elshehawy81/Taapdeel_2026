@@ -781,7 +781,9 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
                       ? const Padding(
                     key: ValueKey('recommendation_loading'),
                     padding: EdgeInsets.only(top: 24),
-                    child: _RecommendationLoadingCard(),
+                    child: RepaintBoundary(
+                      child: _RecommendationLoadingCard(),
+                    ),
                   )
                       : SuggestedSwapsSection(
                     key: const ValueKey('suggested_swaps'),

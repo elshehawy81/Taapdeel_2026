@@ -60,12 +60,8 @@ class _ItemSearchViewState extends State<HomeItemSearchView> {
   // final TextEditingController userInputItemMileTextEditingController =
   //     TextEditingController();
 
-  @override
-  Widget build(BuildContext context) {
-    print(
-        '............................Build UI Again ............................');
-
-    final Widget _searchButtonWidget = PSButtonWidget(
+  Widget _buildSearchButton(BuildContext context) {
+    return PSButtonWidget(
       hasShadow: true,
       width: double.infinity,
       titleText: Utils.getString(context, 'home_search__search'),
@@ -155,7 +151,6 @@ class _ItemSearchViewState extends State<HomeItemSearchView> {
               _searchProductProvider!.itemIsSoldOut;
         }
 
-        print('userInputText' + userInputItemNameTextEditingController.text);
         final dynamic result =
             await Navigator.pushNamed(context, RoutePaths.filterProductList,
                 arguments: ProductListIntentHolder(
@@ -169,9 +164,12 @@ class _ItemSearchViewState extends State<HomeItemSearchView> {
         }
       },
     );
+  }
 
-    repo1 = Provider.of<ProductRepository>(context);
-    valueHolder = Provider.of<PsValueHolder>(context);
+  @override
+  Widget build(BuildContext context) {
+    repo1 = Provider.of<ProductRepository>(context, listen: false);
+    valueHolder = Provider.of<PsValueHolder>(context, listen: false);
 
     return SliverToBoxAdapter(
         child: ChangeNotifierProvider<SearchProductProvider?>(
@@ -561,7 +559,7 @@ class _ItemSearchViewState extends State<HomeItemSearchView> {
                                       top: PsDimens.space16,
                                       right: PsDimens.space16,
                                       bottom: PsDimens.space40),
-                                  child: _searchButtonWidget),
+                                  child: _buildSearchButton(context)),
                             ],
                           ),
                         ),

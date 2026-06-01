@@ -35,23 +35,31 @@ class SearchBarWidget {
       return;
     }
 
-    controller!.addListener(() {
-      if (controller!.text.isEmpty) {
-        if (_clearActive) {
-          setState(() {
-            _clearActive = false;
-          });
-        }
-        return;
-      }
+    controller!.addListener(_onControllerChanged);
+  }
 
-      if (!_clearActive) {
+  void _onControllerChanged() {
+    if (controller!.text.isEmpty) {
+      if (_clearActive) {
         setState(() {
-          _clearActive = true;
+          _clearActive = false;
         });
       }
-    });
+      return;
+    }
+
+    if (!_clearActive) {
+      setState(() {
+        _clearActive = true;
+      });
+    }
   }
+
+  void dispose() {
+    isSearching.dispose();
+    controller?.removeListener(_onControllerChanged);
+  }
+
   /// Whether the search is shown in the same bar background or not.
   final bool inBar;
 

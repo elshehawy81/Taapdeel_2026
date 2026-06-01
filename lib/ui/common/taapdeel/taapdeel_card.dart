@@ -74,9 +74,55 @@ class _TaapdeelCardState extends State<TaapdeelCard>
   // Brand Blue الرسمي المستخدم في كل App
   static const Color _brandBlue = Color(0xFF3167B0);
 
+  static const BorderRadius _cardRadius = BorderRadius.only(
+    topLeft: Radius.circular(24),
+    topRight: Radius.circular(24),
+    bottomLeft: Radius.circular(24),
+    bottomRight: Radius.circular(12),
+  );
+
+  late Color _accent;
+  late List<BoxShadow> _normalShadows;
+  late List<BoxShadow> _pressedShadows;
+
+  void _computeShadows() {
+    _accent = widget.accentColor ?? _brandBlue;
+    _normalShadows = widget.elevated
+        ? <BoxShadow>[
+      BoxShadow(
+        color: _accent.withValues(alpha: 0.22),
+        blurRadius: 24,
+        offset: const Offset(0, 14),
+      ),
+    ]
+        : <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.04),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ];
+    _pressedShadows = widget.elevated
+        ? <BoxShadow>[
+      BoxShadow(
+        color: _accent.withValues(alpha: 0.18),
+        blurRadius: 16,
+        offset: const Offset(0, 9),
+      ),
+    ]
+        : <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.03),
+        blurRadius: 6,
+        offset: const Offset(0, 2),
+      ),
+    ];
+  }
+
   @override
   void initState() {
     super.initState();
+    _computeShadows();
 
     _appearController = AnimationController(
       vsync: this,
@@ -114,6 +160,15 @@ class _TaapdeelCardState extends State<TaapdeelCard>
   }
 
   @override
+  void didUpdateWidget(TaapdeelCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.accentColor != widget.accentColor ||
+        oldWidget.elevated != widget.elevated) {
+      _computeShadows();
+    }
+  }
+
+  @override
   void dispose() {
     _appearController.dispose();
     super.dispose();
@@ -129,50 +184,8 @@ class _TaapdeelCardState extends State<TaapdeelCard>
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = widget.accentColor ?? _brandBlue;
-
-    final BorderRadius radius = const BorderRadius.only(
-      topLeft: Radius.circular(24),
-      topRight: Radius.circular(24),
-      bottomLeft: Radius.circular(24),
-      bottomRight: Radius.circular(12), // شبه cut-corner
-    );
-
-    // Shadows في الوضع العادي + عند الضغط
-    final List<BoxShadow> normalShadows = widget.elevated
-        ? <BoxShadow>[
-      BoxShadow(
-        color: accent.withValues(alpha: 0.22),
-        blurRadius: 24,
-        offset: const Offset(0, 14),
-      ),
-    ]
-        : <BoxShadow>[
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.04),
-        blurRadius: 10,
-        offset: const Offset(0, 4),
-      ),
-    ];
-
-    final List<BoxShadow> pressedShadows = widget.elevated
-        ? <BoxShadow>[
-      BoxShadow(
-        color: accent.withValues(alpha: 0.18),
-        blurRadius: 16,
-        offset: const Offset(0, 9),
-      ),
-    ]
-        : <BoxShadow>[
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.03),
-        blurRadius: 6,
-        offset: const Offset(0, 2),
-      ),
-    ];
-
     final List<BoxShadow> currentShadows =
-    _isPressed ? pressedShadows : normalShadows;
+    _isPressed ? _pressedShadows : _normalShadows;
 
     // ===== محتوى الكارت =====
     Widget cardContent = Padding(
@@ -187,7 +200,7 @@ class _TaapdeelCardState extends State<TaapdeelCard>
               title: widget.title,
               subtitle: widget.subtitle,
               trailing: widget.trailing,
-              accent: accent,
+              accent: _accent,
             ),
             if (widget.body != null) const SizedBox(height: PsDimens.space12),
           ],
@@ -210,7 +223,7 @@ class _TaapdeelCardState extends State<TaapdeelCard>
         children: <Widget>[
           Positioned.fill(
             child: ClipRRect(
-              borderRadius: radius,
+              borderRadius: _cardRadius,
               child: ColorFiltered(
                 colorFilter: ColorFilter.mode(
                   Colors.white.withValues(alpha: 0.60),
@@ -233,16 +246,16 @@ class _TaapdeelCardState extends State<TaapdeelCard>
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        borderRadius: radius,
+        borderRadius: _cardRadius,
         boxShadow: currentShadows,
       ),
       child: ClipRRect(
-        borderRadius: radius,
+        borderRadius: _cardRadius,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: radius,
+              borderRadius: _cardRadius,
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -272,7 +285,7 @@ class _TaapdeelCardState extends State<TaapdeelCard>
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
-            borderRadius: radius,
+            borderRadius: _cardRadius,
             onTap: widget.onTap,
             onTapDown: (_) => _setPressed(true),
             onTapCancel: () => _setPressed(false),

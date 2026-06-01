@@ -63,6 +63,38 @@ class _TaapdeelHighlightCarouselState
   int _currentPage = 0;
   Timer? _autoPlayTimer;
 
+  static const BoxDecoration _layer1Decoration = BoxDecoration(
+    borderRadius: BorderRadius.all(Radius.circular(28)),
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        Color(0xFFE0F1FF),
+        Color(0xFFC3EFE7),
+      ],
+    ),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Color(0x203167B0),
+        blurRadius: 26,
+        offset: Offset(0, 14),
+      ),
+    ],
+  );
+
+  static const BoxDecoration _layer2Decoration = BoxDecoration(
+    borderRadius: BorderRadius.all(Radius.circular(24)),
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        Color(0xF7FFFFFF),
+        Color(0xE6E0F1FF),
+      ],
+    ),
+    border: Border.all(color: Color(0xE6FFFFFF), width: 0.8),
+  );
+
   @override
   void initState() {
     super.initState();
@@ -126,24 +158,7 @@ class _TaapdeelHighlightCarouselState
                     horizontal: PsDimens.space20,
                   ),
                   height: height,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: <Color>[
-                        Color(0xFFE0F1FF), // Ice Blue
-                        Color(0xFFC3EFE7), // Mint Soft
-                      ],
-                    ),
-                    boxShadow: const <BoxShadow>[
-                      BoxShadow(
-                        color: Color(0x203167B0), // Blue @ 12%
-                        blurRadius: 26,
-                        offset: Offset(0, 14),
-                      ),
-                    ],
-                  ),
+                  decoration: _layer1Decoration,
                 ),
               ),
             ),
@@ -163,21 +178,7 @@ class _TaapdeelHighlightCarouselState
                     horizontal: PsDimens.space28,
                   ),
                   height: height - 10,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: <Color>[
-                        Color(0xF7FFFFFF), // white @ ~97%
-                        Color(0xE6E0F1FF), // very soft ice blue
-                      ],
-                    ),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.90),
-                      width: 0.8,
-                    ),
-                  ),
+                  decoration: _layer2Decoration,
                 ),
               ),
             ),
