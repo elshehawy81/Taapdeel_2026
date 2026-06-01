@@ -26,11 +26,17 @@ class PackagesScreen extends StatefulWidget {
 class _PackagesScreenState extends State<PackagesScreen>
     with TickerProviderStateMixin {
   late final AnimationController _controller;
+  late final Future<UserBalanceModel?> _userFuture;
+
   @override
   void initState() {
     super.initState();
 
     _controller = AnimationController(vsync: this);
+    _userFuture = getUserData(
+        context: context,
+        apiKey: PaymentConsts.apiKey,
+        userId: PaymentConsts.userID);
   }
 
   @override
@@ -48,10 +54,7 @@ class _PackagesScreenState extends State<PackagesScreen>
           child: Scaffold(
              // appBar: paymentAppBar(context),
               body: FutureBuilder<UserBalanceModel?>(
-                  future: getUserData(
-                      context: context,
-                      apiKey: PaymentConsts.apiKey,
-                      userId: PaymentConsts.userID),
+                  future: _userFuture,
                   builder: (context, snap) {
                     if (!snap.hasData || snap.hasError || snap.data == null) {
                       return Center(

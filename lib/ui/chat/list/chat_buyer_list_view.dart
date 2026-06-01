@@ -47,6 +47,15 @@ class _ChatBuyerListViewState extends State<ChatBuyerListView>
   SwapUiStatus _selectedFilter = SwapUiStatus.all;
   String? _selectedGroupKey;
 
+  // Cache for expensive build() computations — recomputed only when inputs change
+  List<ChatHistory>? _lastComputedRequests;
+  SwapUiStatus? _lastComputedFilter;
+  String? _lastSortedGroupKey;
+  Map<SwapUiStatus, int> _cachedFilterCounts = const {};
+  List<ChatHistory> _cachedFiltered = const [];
+  List<GroupedSwapRequests> _cachedGrouped = const [];
+  List<ChatHistory> _cachedSorted = const [];
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -92,38 +101,45 @@ class _ChatBuyerListViewState extends State<ChatBuyerListView>
     final List<ChatHistory> allRequests =
     MainBuyerProvider.of(context).allRequests();
 
-    final Map<SwapUiStatus, int> filterCounts =
-    SwapRequestUiStatusHelper.buildFilterCounts(
-      requests: allRequests,
-      userType: UserType.buyer,
-    );
+    final bool inputsChanged = allRequests != _lastComputedRequests ||
+        _selectedFilter != _lastComputedFilter;
 
-    final List<ChatHistory> filteredRequests =
-    SwapRequestUiStatusHelper.filterRequests(
-      requests: allRequests,
-      userType: UserType.buyer,
-      selectedFilter: _selectedFilter,
-    );
-
-    final List<GroupedSwapRequests> groupedRequests =
-    SwapRequestGroupingHelper.groupRequests(
-      requests: filteredRequests,
-      userType: UserType.buyer,
-    );
+    if (inputsChanged) {
+      _lastComputedRequests = allRequests;
+      _lastComputedFilter = _selectedFilter;
+      _cachedFilterCounts = SwapRequestUiStatusHelper.buildFilterCounts(
+        requests: allRequests,
+        userType: UserType.buyer,
+      );
+      _cachedFiltered = SwapRequestUiStatusHelper.filterRequests(
+        requests: allRequests,
+        userType: UserType.buyer,
+        selectedFilter: _selectedFilter,
+      );
+      _cachedGrouped = SwapRequestGroupingHelper.groupRequests(
+        requests: _cachedFiltered,
+        userType: UserType.buyer,
+      );
+    }
 
     final String? effectiveSelectedGroupKey =
-    _resolveSelectedGroupKey(groupedRequests);
+    _resolveSelectedGroupKey(_cachedGrouped);
     final GroupedSwapRequests? selectedGroup = _findSelectedGroup(
-      groupedRequests,
+      _cachedGrouped,
       effectiveSelectedGroupKey,
     );
 
-    final List<ChatHistory> selectedRequests = selectedGroup == null
-        ? <ChatHistory>[]
-        : SwapRequestUiStatusHelper.sortRequestsByVisualPriority(
-      requests: selectedGroup.requests,
-      userType: UserType.buyer,
-    );
+    if (inputsChanged || effectiveSelectedGroupKey != _lastSortedGroupKey) {
+      _lastSortedGroupKey = effectiveSelectedGroupKey;
+      _cachedSorted = selectedGroup == null
+          ? <ChatHistory>[]
+          : SwapRequestUiStatusHelper.sortRequestsByVisualPriority(
+        requests: selectedGroup.requests,
+        userType: UserType.buyer,
+      );
+    }
+
+    final List<ChatHistory> selectedRequests = _cachedSorted;
 
     return Scaffold(
       backgroundColor: PsColors.baseColor,
@@ -150,7 +166,7 @@ class _ChatBuyerListViewState extends State<ChatBuyerListView>
               options: SwapRequestUiStatusHelper.filterOptionsFor(
                 UserType.buyer,
               ),
-              counts: filterCounts,
+              counts: _cachedFilterCounts,
               onSelected: (SwapUiStatus status) {
                 setState(() {
                   _selectedFilter = status;
@@ -159,7 +175,7 @@ class _ChatBuyerListViewState extends State<ChatBuyerListView>
               },
             ),
             const SizedBox(height: 15),
-            if (groupedRequests.isEmpty)
+            if (_cachedGrouped.isEmpty)
               _EmptyStateCard(
                 title: 'لا توجد طلبات مرسلة',
                 subtitle: _selectedFilter == SwapUiStatus.all
@@ -168,7 +184,7 @@ class _ChatBuyerListViewState extends State<ChatBuyerListView>
               )
             else ...<Widget>[
               SwapRequestsProductsPickerSection(
-                groups: groupedRequests,
+                groups: _cachedGrouped,
                 userType: UserType.buyer,
                 selectedGroupKey: effectiveSelectedGroupKey,
                 title: 'المنتجات التي أرسلت بها طلبات',
