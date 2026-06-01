@@ -520,149 +520,171 @@ class _ProfilePageState extends State<ProfileView>
         margin: EdgeInsets.zero,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         withBlur: true,
-        // ✅ FIX: Consumer chain يشمل كل الـ 8 providers
-        //    Rejected و Disabled كانوا مش في Selector → مفيش rebuild
-        child: Consumer<RejectedProductProvider>(
-            builder: (context, rejectedP, _) =>
-                Consumer<DisabledProductProvider>(
-                    builder: (context, disabledP, _) =>
-                        Consumer<HomeProvider>(
-                            builder: (context, homeP, _) =>
-                                Consumer<ProfileFamilyItemsProvider>(
-                                    builder: (context, famP, _) =>
-                                        Consumer<AddedItemProvider>(
-                                            builder: (context, activeP, _) =>
-                                                Consumer<PendingProductProvider>(
-                                                    builder: (context, pendingP, _) =>
-                                                        Consumer<PaidAdItemProvider>(
-                                                            builder: (context, paidP, _) =>
-                                                                Consumer<SoldOutProductProvider>(
-                                                                    builder: (context, soldP, _) {
-                                                                      final famList = famP.itemList.data ?? <Product>[];
-                                                                      if (famList.isNotEmpty) _familyTotalValueCache = _sumProductsMinPrice(famList);
-                                                                      final actList = activeP.itemList.data ?? <Product>[];
-                                                                      if (actList.isNotEmpty) _activeTotalValueCache = _sumProductsMinPrice(actList);
-                                                                      final pendList = pendingP.itemList.data ?? <Product>[];
-                                                                      if (pendList.isNotEmpty) _pendingTotalValueCache = _sumProductsMinPrice(pendList);
-                                                                      final soldList = soldP.itemList.data ?? <Product>[];
-                                                                      if (soldList.isNotEmpty) _soldTotalValueCache = _sumProductsMinPrice(soldList);
-                                                                      final paidList = paidP.paidAdItemList.data ?? <dynamic>[];
-                                                                      if (paidList.isNotEmpty) _paidTotalValueCache = _sumPaidItemsMinPrice(paidList);
-                                                                      final rejectedList = rejectedP.itemList.data ?? <Product>[];
-                                                                      if (rejectedList.isNotEmpty) _rejectedTotalValueCache = _sumProductsMinPrice(rejectedList);
-                                                                      final disabledList = disabledP.itemList.data ?? <Product>[];
-                                                                      if (disabledList.isNotEmpty) _disabledTotalValueCache = _sumProductsMinPrice(disabledList);
+        child: Selector6<
+            RejectedProductProvider,
+            DisabledProductProvider,
+            HomeProvider,
+            ProfileFamilyItemsProvider,
+            AddedItemProvider,
+            PendingProductProvider,
+            _CardsBarData>(
+          selector: (_, rejectedP, disabledP, homeP, famP, activeP, pendingP) {
+            final famList = famP.itemList.data ?? <Product>[];
+            if (famList.isNotEmpty) _familyTotalValueCache = _sumProductsMinPrice(famList);
+            final actList = activeP.itemList.data ?? <Product>[];
+            if (actList.isNotEmpty) _activeTotalValueCache = _sumProductsMinPrice(actList);
+            final pendList = pendingP.itemList.data ?? <Product>[];
+            if (pendList.isNotEmpty) _pendingTotalValueCache = _sumProductsMinPrice(pendList);
+            final rejectedList = rejectedP.itemList.data ?? <Product>[];
+            if (rejectedList.isNotEmpty) _rejectedTotalValueCache = _sumProductsMinPrice(rejectedList);
+            final disabledList = disabledP.itemList.data ?? <Product>[];
+            if (disabledList.isNotEmpty) _disabledTotalValueCache = _sumProductsMinPrice(disabledList);
 
-                                                                      final data = _CardsBarData(
-                                                                        wishCount: homeP.wishListProducts.length,
-                                                                        wishLoading: homeP.wishLoading,
-                                                                        familyCount: famList.length,
-                                                                        familyLoading: famP.itemList.status == PsStatus.BLOCK_LOADING ||
-                                                                            famP.itemList.status == PsStatus.PROGRESS_LOADING ||
-                                                                            famP.itemList.status == PsStatus.LOADING,
-                                                                        familyTotalValue: _familyTotalValueCache,
-                                                                        activeCount: actList.length,
-                                                                        activeLoading: activeP.itemList.status == PsStatus.BLOCK_LOADING,
-                                                                        activeTotalValue: _activeTotalValueCache,
-                                                                        pendingCount: pendList.length,
-                                                                        pendingLoading: pendingP.itemList.status == PsStatus.BLOCK_LOADING,
-                                                                        pendingTotalValue: _pendingTotalValueCache,
-                                                                        pendingStatus: pendingP.itemList.status,
-                                                                        soldCount: soldList.length,
-                                                                        soldLoading: soldP.itemList.status == PsStatus.BLOCK_LOADING,
-                                                                        soldTotalValue: _soldTotalValueCache,
-                                                                        soldStatus: soldP.itemList.status,
-                                                                        rejectedCount: rejectedList.length,
-                                                                        rejectedLoading: rejectedP.itemList.status == PsStatus.BLOCK_LOADING,
-                                                                        rejectedTotalValue: _rejectedTotalValueCache,
-                                                                        rejectedStatus: rejectedP.itemList.status,
-                                                                        disabledCount: disabledList.length,
-                                                                        disabledLoading: disabledP.itemList.status == PsStatus.BLOCK_LOADING,
-                                                                        disabledTotalValue: _disabledTotalValueCache,
-                                                                        disabledStatus: disabledP.itemList.status,
-                                                                        paidCount: paidList.length,
-                                                                        paidLoading: paidP.paidAdItemList.status == PsStatus.BLOCK_LOADING,
-                                                                        paidTotalValue: _paidTotalValueCache,
-                                                                      );
+            // sold/paid fields are sentinel zeros — computed by the inner Selector2
+            return _CardsBarData(
+              wishCount: homeP.wishListProducts.length,
+              wishLoading: homeP.wishLoading,
+              familyCount: famList.length,
+              familyLoading: famP.itemList.status == PsStatus.BLOCK_LOADING ||
+                  famP.itemList.status == PsStatus.PROGRESS_LOADING ||
+                  famP.itemList.status == PsStatus.LOADING,
+              familyTotalValue: _familyTotalValueCache,
+              activeCount: actList.length,
+              activeLoading: activeP.itemList.status == PsStatus.BLOCK_LOADING,
+              activeTotalValue: _activeTotalValueCache,
+              pendingCount: pendList.length,
+              pendingLoading: pendingP.itemList.status == PsStatus.BLOCK_LOADING,
+              pendingTotalValue: _pendingTotalValueCache,
+              pendingStatus: pendingP.itemList.status,
+              rejectedCount: rejectedList.length,
+              rejectedLoading: rejectedP.itemList.status == PsStatus.BLOCK_LOADING,
+              rejectedTotalValue: _rejectedTotalValueCache,
+              rejectedStatus: rejectedP.itemList.status,
+              disabledCount: disabledList.length,
+              disabledLoading: disabledP.itemList.status == PsStatus.BLOCK_LOADING,
+              disabledTotalValue: _disabledTotalValueCache,
+              disabledStatus: disabledP.itemList.status,
+              soldCount: 0,
+              soldLoading: false,
+              soldTotalValue: 0,
+              soldStatus: PsStatus.NOACTION,
+              paidCount: 0,
+              paidLoading: false,
+              paidTotalValue: 0,
+            );
+          },
+          builder: (_, partial, __) => Selector2<PaidAdItemProvider, SoldOutProductProvider, _CardsBarData>(
+            selector: (_, paidP, soldP) {
+              final paidList = paidP.paidAdItemList.data ?? <dynamic>[];
+              if (paidList.isNotEmpty) _paidTotalValueCache = _sumPaidItemsMinPrice(paidList);
+              final soldList = soldP.itemList.data ?? <Product>[];
+              if (soldList.isNotEmpty) _soldTotalValueCache = _sumProductsMinPrice(soldList);
 
-                                                                      return Column(
-                                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                                        children: [
-                                                                          Padding(
-                                                                            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                                                                            child: Row(
-                                                                              children: [
-                                                                                Container(
-                                                                                  width: 5,
-                                                                                  height: 18,
-                                                                                  decoration: BoxDecoration(
-                                                                                    color: PsColors.activeColor,
-                                                                                    borderRadius: BorderRadius.circular(99),
-                                                                                  ),
-                                                                                ),
-                                                                                const SizedBox(width: 8),
-                                                                                Expanded(
-                                                                                  child: Text(
-                                                                                    'تفاصيل منتجاتك',
-                                                                                    style:
-                                                                                    Theme.of(context).textTheme.titleSmall?.copyWith(
-                                                                                      fontWeight: FontWeight.w900,
-                                                                                      color: Colors.black.withOpacity(0.85),
-                                                                                    ),
-                                                                                  ),
-                                                                                ),
-                                                                              ],
-                                                                            ),
-                                                                          ),
-                                                                          ProfileHorizontalCardsBar(
-                                                                            expandedType: _expandedType,
-                                                                            controller: _cardsController,
-                                                                            onTap: (type, index) =>
-                                                                                _toggleSection(context, type, index),
+              return _CardsBarData(
+                wishCount: partial.wishCount,
+                wishLoading: partial.wishLoading,
+                familyCount: partial.familyCount,
+                familyLoading: partial.familyLoading,
+                familyTotalValue: partial.familyTotalValue,
+                activeCount: partial.activeCount,
+                activeLoading: partial.activeLoading,
+                activeTotalValue: partial.activeTotalValue,
+                pendingCount: partial.pendingCount,
+                pendingLoading: partial.pendingLoading,
+                pendingTotalValue: partial.pendingTotalValue,
+                pendingStatus: partial.pendingStatus,
+                rejectedCount: partial.rejectedCount,
+                rejectedLoading: partial.rejectedLoading,
+                rejectedTotalValue: partial.rejectedTotalValue,
+                rejectedStatus: partial.rejectedStatus,
+                disabledCount: partial.disabledCount,
+                disabledLoading: partial.disabledLoading,
+                disabledTotalValue: partial.disabledTotalValue,
+                disabledStatus: partial.disabledStatus,
+                soldCount: soldList.length,
+                soldLoading: soldP.itemList.status == PsStatus.BLOCK_LOADING,
+                soldTotalValue: _soldTotalValueCache,
+                soldStatus: soldP.itemList.status,
+                paidCount: paidList.length,
+                paidLoading: paidP.paidAdItemList.status == PsStatus.BLOCK_LOADING,
+                paidTotalValue: _paidTotalValueCache,
+              );
+            },
+            builder: (context, data, _) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 5,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: PsColors.activeColor,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'تفاصيل منتجاتك',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: Colors.black.withOpacity(0.85),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ProfileHorizontalCardsBar(
+                    expandedType: _expandedType,
+                    controller: _cardsController,
+                    onTap: (type, index) => _toggleSection(context, type, index),
 
-                                                                            wishCount: data.wishCount,
-                                                                            wishLoading: data.wishLoading,
-                                                                            wishTotalValue: 0,
+                    wishCount: data.wishCount,
+                    wishLoading: data.wishLoading,
+                    wishTotalValue: 0,
 
-                                                                            familyCount: data.familyCount,
-                                                                            familyLoading: data.familyLoading,
-                                                                            familyTotalValue: data.familyTotalValue,
+                    familyCount: data.familyCount,
+                    familyLoading: data.familyLoading,
+                    familyTotalValue: data.familyTotalValue,
 
-                                                                            activeCount: data.activeCount,
-                                                                            activeLoading: data.activeLoading,
-                                                                            activeTotalValue: data.activeTotalValue,
+                    activeCount: data.activeCount,
+                    activeLoading: data.activeLoading,
+                    activeTotalValue: data.activeTotalValue,
 
-                                                                            // ✅ FIX 3: نمرّر isCountReady = false لما NOACTION
-                                                                            //           عشان الـ cards bar يعرض "·" بدل "0"
-                                                                            pendingCount: data.pendingCount,
-                                                                            pendingLoading: data.pendingLoading,
-                                                                            pendingTotalValue: data.pendingTotalValue,
-                                                                            pendingCountReady: data.pendingStatus != PsStatus.NOACTION,
+                    pendingCount: data.pendingCount,
+                    pendingLoading: data.pendingLoading,
+                    pendingTotalValue: data.pendingTotalValue,
+                    pendingCountReady: data.pendingStatus != PsStatus.NOACTION,
 
-                                                                            paidCount: data.paidCount,
-                                                                            paidLoading: data.paidLoading,
-                                                                            paidTotalValue: data.paidTotalValue,
+                    paidCount: data.paidCount,
+                    paidLoading: data.paidLoading,
+                    paidTotalValue: data.paidTotalValue,
 
-                                                                            soldCount: data.soldCount,
-                                                                            soldLoading: data.soldLoading,
-                                                                            soldTotalValue: data.soldTotalValue,
-                                                                            soldCountReady: data.soldStatus != PsStatus.NOACTION,
+                    soldCount: data.soldCount,
+                    soldLoading: data.soldLoading,
+                    soldTotalValue: data.soldTotalValue,
+                    soldCountReady: data.soldStatus != PsStatus.NOACTION,
 
-                                                                            rejectedCount: data.rejectedCount,
-                                                                            rejectedLoading: data.rejectedLoading,
-                                                                            rejectedTotalValue: data.rejectedTotalValue,
-                                                                            rejectedCountReady:
-                                                                            data.rejectedStatus != PsStatus.NOACTION,
+                    rejectedCount: data.rejectedCount,
+                    rejectedLoading: data.rejectedLoading,
+                    rejectedTotalValue: data.rejectedTotalValue,
+                    rejectedCountReady: data.rejectedStatus != PsStatus.NOACTION,
 
-                                                                            disabledCount: data.disabledCount,
-                                                                            disabledLoading: data.disabledLoading,
-                                                                            disabledTotalValue: data.disabledTotalValue,
-                                                                            disabledCountReady:
-                                                                            data.disabledStatus != PsStatus.NOACTION,
-                                                                          ),
-                                                                        ],
-                                                                      );
-                                                                    })))))))),
+                    disabledCount: data.disabledCount,
+                    disabledLoading: data.disabledLoading,
+                    disabledTotalValue: data.disabledTotalValue,
+                    disabledCountReady: data.disabledStatus != PsStatus.NOACTION,
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
