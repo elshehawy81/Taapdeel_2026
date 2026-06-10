@@ -24,6 +24,7 @@ import 'package:taapdeel/ui/common/dialog/version_update_dialog.dart';
 import 'package:taapdeel/ui/common/dialog/warning_dialog_view.dart';
 import 'package:taapdeel/ui/common/ps_square_progress_widget.dart';
 import 'package:taapdeel/ui/common/taapdeel/taapdeel_scaffold.dart';
+import 'package:taapdeel/ui/category/default_interests_bootstrapper.dart';
 import 'package:taapdeel/utils/utils.dart';
 import 'package:taapdeel/viewobject/common/ps_value_holder.dart';
 import 'package:taapdeel/viewobject/holder/app_info_parameter_holder.dart';
@@ -79,50 +80,51 @@ class _AppLoadingViewState extends State<AppLoadingView> {
     return hasLocation && hasTownship && gender.isNotEmpty && age.isNotEmpty;
   }
 
-  void _goNextAfterLoading(
+  Future<void> _goNextAfterLoading(
       BuildContext context,
       AppInfoProvider appInfoProvider,
-      ) {
+      ) async {
+
     if (!context.mounted) {
+
       return;
     }
 
     final PsValueHolder valueHolder =
     Provider.of<PsValueHolder>(context, listen: false);
 
-    // 1) Force login
-    if (valueHolder.isForceLogin == true &&
-        Utils.checkUserLoginId(valueHolder) == 'nologinuser') {
-      Navigator.pushReplacementNamed(context, RoutePaths.login_container);
-      return;
-    }
 
-    // 2) Profile setup
+    // 1) Profile setup
     final bool complete = _isProfileSetupComplete(
       valueHolder,
       appInfoProvider.isSubLocation,
     );
+
 
     if (!complete) {
       Navigator.pushReplacementNamed(context, _profileSetupRoute);
       return;
     }
 
-    // 3) Categories onboarding
-    if (valueHolder.hasFavCategories != true) {
-      Navigator.pushReplacementNamed(
-        context,
-        RoutePaths.CategoryView,
-        arguments: <String, dynamic>{
-          'onTap': null,
-          'onBoarding': true,
-          'Discover': false,
-        },
-      );
+    // 2) Home fallback bootstrap
+    // AppLoading now has only two destinations: Single Intro or Home.
+    // Always call the helper as a safe fallback. The helper will skip only
+    // when real local selected subcategories exist. It will NOT trust
+    // hasFavCategories alone, because the flag can be stale while the actual
+    // local list is empty.
+    await DefaultInterestsBootstrapper.ensureDefaultInterests(
+      context: context,
+      valueHolder: valueHolder,
+      force: false,
+      syncToServerIfLoggedIn: true,
+      source: 'app_loading_fallback',
+    );
+
+    if (!context.mounted) {
       return;
     }
 
-    // 4) Home
+    // 3) Home
     Navigator.pushReplacementNamed(context, RoutePaths.home);
   }
 

@@ -82,9 +82,9 @@ class _TaapdeelHighlightCarouselState
     ],
   );
 
-  static const BoxDecoration _layer2Decoration = BoxDecoration(
-    borderRadius: BorderRadius.all(Radius.circular(24)),
-    gradient: LinearGradient(
+  static final BoxDecoration _layer2Decoration = BoxDecoration(
+    borderRadius: const BorderRadius.all(Radius.circular(24)),
+    gradient: const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: <Color>[
@@ -92,7 +92,7 @@ class _TaapdeelHighlightCarouselState
         Color(0xE6E0F1FF),
       ],
     ),
-    border: Border.all(color: Color(0xE6FFFFFF), width: 0.8),
+    border: Border.all(color: const Color(0xE6FFFFFF), width: 0.8),
   );
 
   @override

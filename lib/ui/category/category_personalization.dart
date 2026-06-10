@@ -10,12 +10,10 @@ import 'package:taapdeel/viewobject/category.dart';
 ///  - fashion_beauty
 ///  - electronics
 ///  - hobbies
-///  - Discover
+///  - home
 ///  - moms
 ///  - clothes
 ///  - other
-///
-/// بعدين نعمل Mapping من catName (عربي / إنجليزي) → key
 
 const Map<String, Map<String, List<String>>> kCategoryOrderRules = {
   'female': {
@@ -189,7 +187,6 @@ const Map<String, Map<String, List<String>>> kCategoryOrderRules = {
       'fashion_beauty',
       'home',
       'moms',
-
     ],
     '50+': [
       'books',
@@ -207,13 +204,21 @@ const Map<String, Map<String, List<String>>> kCategoryOrderRules = {
   },
 };
 
-/// تحويل قيمة الفئة العمرية المخزّنة → مفتاح جدول القواعد
+/// ✅ تحويل قيمة الفئة العمرية المخزّنة → مفتاح جدول القواعد
+///
+/// بيدعم كل الـ values الممكنة من Profile Setup:
+///   '6-9', '10-11', '12-15', '12-', '16-22', '23-35', '36-50', '50+'
 String? mapAgeRangeToRuleKey(String? ageRange) {
   if (ageRange == null || ageRange.isEmpty) return null;
 
-  switch (ageRange) {
-    case '12-':
+  switch (ageRange.trim()) {
+  // ✅ أضفنا '6-9' و'10-11' اللي كانوا مفقودين
+    case '6-9':
+      return '6-9';
+    case '10-11':
       return '10-11';
+  // ✅ '12-' كـ fallback للـ key القديم (لو بيتخزن كده في بعض الأجهزة)
+    case '12-':
     case '12-15':
       return '12-15';
     case '16-22':
@@ -232,6 +237,7 @@ String? mapAgeRangeToRuleKey(String? ageRange) {
 /// ✅ Public Mapping من اسم التصنيف (عربي / إنجليزي) → key موحّد
 /// (دي اللي هنستخدمها في أي ملف تاني زي WishItemEntryView)
 String mapCategoryNameToKey(String rawName) {
+  // ✅ نعمل toLowerCase أول حاجة مرة واحدة بس
   final String name = rawName.trim().toLowerCase();
 
   // ملابس / Clothes
@@ -247,6 +253,7 @@ String mapCategoryNameToKey(String rawName) {
 
   // موضة وجمال / Fashion & Beauty
   if (name.contains('موضة') ||
+      name.contains('موضه') ||
       name.contains('جمال') ||
       name.contains('beauty') ||
       name.contains('fashion') ||
@@ -257,7 +264,9 @@ String mapCategoryNameToKey(String rawName) {
   }
 
   // أمهات / Moms
+  // ✅ أضفنا 'امهات' بدون همزة (الاسم الفعلي في DB)
   if (name.contains('أمهات') ||
+      name.contains('امهات') ||
       name.contains('الام') ||
       name.contains('الطفل') ||
       name.contains('moms') ||
@@ -267,9 +276,10 @@ String mapCategoryNameToKey(String rawName) {
   }
 
   // المنزل / Home
+  // ✅ صلحنا 'Discover' → 'discover' (اللي كان بيفشل دايماً بعد toLowerCase)
   if (name.contains('المنزل') ||
       name.contains('منزل') ||
-      name.contains('Discover') ||
+      name.contains('discover') ||
       name.contains('house') ||
       name.contains('household')) {
     return 'home';
@@ -279,6 +289,7 @@ String mapCategoryNameToKey(String rawName) {
   if (name.contains('أدوات مدرسية') ||
       name.contains('ادوات مدرسية') ||
       name.contains('مدرسية') ||
+      name.contains('مدرسيه') ||
       name.contains('school') ||
       name.contains('stationery') ||
       name.contains('supplies')) {
@@ -289,6 +300,7 @@ String mapCategoryNameToKey(String rawName) {
   if (name.contains('هوايات') ||
       name.contains('مهن') ||
       name.contains('هواية') ||
+      name.contains('هوايه') ||
       name.contains('hobby') ||
       name.contains('hobbies') ||
       name.contains('craft') ||
@@ -329,6 +341,7 @@ String mapCategoryNameToKey(String rawName) {
 
   // رياضة / Sports
   if (name.contains('رياضة') ||
+      name.contains('رياضه') ||
       name.contains('رياضي') ||
       name.contains('sports') ||
       name.contains('sport') ||
@@ -370,7 +383,6 @@ void sortCategoriesByProfile({
   final List<String>? ruleOrder = genderRules?[ageGroupKey];
   if (ruleOrder == null) return;
 
-  // Map: key → ترتيب الأولوية
   final Map<String, int> orderIndex = <String, int>{
     for (int i = 0; i < ruleOrder.length; i++) ruleOrder[i]: i,
   };

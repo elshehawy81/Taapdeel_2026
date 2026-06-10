@@ -16,6 +16,7 @@ import 'package:taapdeel/ui/common/taapdeel/taapdeel_card.dart';
 import 'package:taapdeel/ui/common/taapdeel/taapdeel_glass_bottom_sheet.dart';
 import 'package:taapdeel/ui/common/taapdeel/taapdeel_scaffold.dart';
 import 'package:taapdeel/ui/common/taapdeel/taapdeel_text_field.dart';
+import 'package:taapdeel/ui/category/default_interests_bootstrapper.dart';
 import 'package:taapdeel/utils/utils.dart';
 import 'package:taapdeel/viewobject/common/language.dart';
 import 'package:taapdeel/viewobject/common/ps_value_holder.dart';
@@ -54,86 +55,8 @@ class TaapdeelPickerOption {
   });
 }
 
-class _BenefitsStrip extends StatelessWidget {
-  const _BenefitsStrip();
 
-  @override
-  Widget build(BuildContext context) {
-    return _GlassCard(
-      radius: 18,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      child: const Row(
-        children: <Widget>[
-          Expanded(
-            child: _Benefit(
-              icon: Icons.payments_rounded,
-              label: 'وفر فلوسك',
-              color: Color(0xFF0B9A75),
-            ),
-          ),
-          _Vdivider(),
-          Expanded(
-            child: _Benefit(
-              icon: Icons.person_search_rounded,
-              label: 'وفر مجهودك',
-              color: Color(0xFF0E989B),
-            ),
-          ),
-          _Vdivider(),
-          Expanded(
-            child: _Benefit(
-              icon: Icons.lightbulb_rounded,
-              label: 'جدد حياتك',
-              color: Color(0xFF0D5E7B),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
-class _Benefit extends StatelessWidget {
-  const _Benefit({required this.icon, required this.label, required this.color});
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        Icon(icon, color: color, size: 22),
-        const SizedBox(width: 7),
-        Flexible(
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontFamily: _C.font,
-              color: _C.navy,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Vdivider extends StatelessWidget {
-  const _Vdivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(width: 1, height: 34, color: _C.softBorder.withOpacity(0.72));
-  }
-}
 
 class _GlassInfoPanel extends StatelessWidget {
   const _GlassInfoPanel({
@@ -670,7 +593,7 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
                 children: <Widget>[
                   Expanded(
                     child: TaapdeelButton(
-                      label: _copy('ابدأ التخصيص', 'Start personalization'),
+                      label: _copy('إكتشف منتجات تناسبك', 'Discover Products'),
                       isPrimary: true,
                       isExpanded: true,
                       onPressed: () =>
@@ -765,7 +688,7 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
                         ),
                         child: ConstrainedBox(
                           constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight - 56,
+                            minHeight: constraints.maxHeight - 24,
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -778,8 +701,6 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
                                 colorScheme,
                                 locationProvider,
                               ),
-                              const SizedBox(height: 16),
-                              const _BenefitsStrip(),
                             ],
                           ),
                         ),
@@ -816,6 +737,9 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
   }
 
   Widget _buildHeroIntroCard(ThemeData theme) {
+    final Size size = MediaQuery.of(context).size;
+    final bool compact = size.height < 780 || size.width < 380;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
@@ -867,11 +791,31 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
               Text(
                 _copy('أهلًا بك في تـبـديــل', 'Welcome to Taapdeel'),
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
+                  fontFamily: _C.font,
                   color: Color(0xFF072D56),
                   fontWeight: FontWeight.w900,
-                  fontSize: 18,
+                  fontSize: 22,
                   height: 1.25,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                _copy(
+                  'هنقدملك تجربة مخصصة لك',
+                  'Swap your unused products for items that fit you and your family',
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: _C.font,
+                  color: const Color(0xFF315A7A).withValues(alpha: 0.88),
+                  fontWeight: FontWeight.w700,
+                  fontSize: compact ? 14 : 18,
+                  height: 1.45,
                 ),
               ),
             ],
@@ -958,22 +902,14 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      _copy('هنقدملك تجربة مخصصة لك', 'Let us personalize your experience'),
-                      style: const TextStyle(
-                        color: Color(0xFF072D56),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                        height: 1.25,
-                      ),
-                    ),
+
                     const SizedBox(height: 5),
                     Text(
                       _copy(
-                        'اختياراتك تساعدنا نقدملك نرشحيات منتجات مناسبة للتبديل.',
+                        'اختياراتك تساعدنا نقدملك نرشحيات تبديل مناسبة لك .',
                         'These choices help us suggest better swaps.',
                       ),
-                      style: theme.textTheme.bodySmall?.copyWith(
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         color: const Color(0xFF315A7A),
                         fontWeight: FontWeight.w700,
                         height: 1.45,
@@ -1590,6 +1526,7 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
   }
 
   Future<void> _saveProfileInputs(ItemLocationProvider locationProvider) async {
+    debugPrint('[TD_PROFILE_SETUP] START _saveProfileInputs locationId=${locationProvider.itemLocationId} townshipId=${locationProvider.itemLocationTownshipId} gender=$_selectedGender age=$_selectedAgeRange');
     await locationProvider.replaceItemLocationData(
       locationProvider.itemLocationId!,
       locationProvider.itemLocationName!,
@@ -1616,6 +1553,7 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
       await prefs.replaceUserAgeRange(_selectedAgeRange);
     }
     await prefs.replaceIsUserAlreadyChoose(true);
+    debugPrint('[TD_PROFILE_SETUP] END _saveProfileInputs saved gender=$_selectedGender age=$_selectedAgeRange locationId=${locationProvider.itemLocationId} townshipId=${locationProvider.itemLocationTownshipId}');
   }
 
   Future<void> _onGoIntroPressed(
@@ -1629,21 +1567,37 @@ class _TaapdeelProfileSetupViewState extends State<TaapdeelProfileSetupView>
 
   Future<void> _onGoCategoryPressed(
       BuildContext context, ItemLocationProvider locationProvider) async {
+    debugPrint('[TD_PROFILE_SETUP] Button pressed. gender=$_selectedGender age=$_selectedAgeRange locationId=${locationProvider.itemLocationId} townshipId=${locationProvider.itemLocationTownshipId}');
     if (!_validateProfileInputs(context, locationProvider)) {
+      debugPrint('[TD_PROFILE_SETUP] STOP: validation failed.');
       return;
     }
 
     await _saveProfileInputs(locationProvider);
 
-    Navigator.pushReplacementNamed(
-      context,
-      RoutePaths.CategoryView,
-      arguments: <String, dynamic>{
-        'onTap': null,
-        'onBoarding': true,
-        'Discover': false,
-      },
+    final PsValueHolder valueHolder =
+    Provider.of<PsValueHolder>(context, listen: false);
+
+    await DefaultInterestsBootstrapper.ensureDefaultInterests(
+      context: context,
+      valueHolder: valueHolder,
+      // ✅ Force here because this is the first profile setup completion.
+      // We also pass the just-selected values because PsValueHolder may not
+      // refresh userGender/userAgeRange immediately after saving preferences.
+      force: true,
+      syncToServerIfLoggedIn: true,
+      genderOverride: _selectedGender,
+      ageRangeOverride: _selectedAgeRange,
+      source: 'profile_setup_button',
     );
+
+    if (!mounted) {
+      debugPrint('[TD_PROFILE_SETUP] STOP: widget unmounted after bootstrap.');
+      return;
+    }
+
+    debugPrint('[TD_PROFILE_SETUP] Navigate to Home after bootstrap.');
+    Navigator.pushReplacementNamed(context, RoutePaths.home);
   }
 }
 class _GlassCard extends StatelessWidget {

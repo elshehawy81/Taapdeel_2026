@@ -1027,7 +1027,7 @@ class _EditInterestsButton extends StatelessWidget {
                 ),
                 SizedBox(width: 5),
                 Text(
-                  'اهتماماتك',
+                  'تعديل اهتماماتك',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,

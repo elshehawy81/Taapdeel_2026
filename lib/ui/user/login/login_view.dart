@@ -19,6 +19,7 @@ import 'package:taapdeel/ui/common/taapdeel/taapdeel_button.dart';
 import 'package:taapdeel/ui/common/taapdeel/taapdeel_card.dart';
 import 'package:taapdeel/ui/common/taapdeel/taapdeel_section_header.dart';
 import 'package:taapdeel/ui/common/taapdeel/taapdeel_text_field.dart';
+import 'package:taapdeel/ui/category/default_interests_bootstrapper.dart';
 import 'package:taapdeel/utils/auth_service.dart';
 import 'package:taapdeel/utils/utils.dart';
 import 'package:taapdeel/viewobject/api_status.dart';
@@ -161,7 +162,6 @@ class _LoginViewState extends State<LoginView> {
         referralRegisteredAt.isEmpty ? null : referralRegisteredAt,
       );
     } catch (e) {
-      debugPrint('persistReferralDataFromUser error: $e');
     }
   }
 
@@ -182,7 +182,6 @@ class _LoginViewState extends State<LoginView> {
         _selectedProfileImageFile = File(picked.path);
       });
     } catch (e) {
-      debugPrint('Pick profile image error: $e');
       _showSnack('لم نتمكن من اختيار الصورة، حاول مرة أخرى');
     }
   }
@@ -391,9 +390,6 @@ class _LoginViewState extends State<LoginView> {
     final String rawPhoneNumber = _phoneController.text.trim();
     final String phoneNumber = _normalizeEgyptPhone(rawPhoneNumber);
 
-    debugPrint('PHONE_AUTH_RAW_PHONE=$rawPhoneNumber');
-    debugPrint('PHONE_AUTH_NORMALIZED_PHONE=$phoneNumber');
-
     if (rawPhoneNumber.isEmpty) {
       _showSnack(Utils.getString(context, 'login__error_empty_phone'));
       return;
@@ -442,7 +438,6 @@ class _LoginViewState extends State<LoginView> {
             await _authService.signInWithCredential(credential);
             await _onLoginSuccess(context, provider);
           } catch (e) {
-            debugPrint('Auto sign-in error: $e');
             _showSnack(Utils.getString(context, 'login__error_auto_signin'));
           } finally {
             if (mounted) setState(() => _isVerifying = false);
@@ -459,7 +454,7 @@ class _LoginViewState extends State<LoginView> {
         },
       );
     } catch (e) {
-      debugPrint('Send OTP error: $e');
+
       _hideOtpSendingSnack(context);
       _showSnack(Utils.getString(context, 'login__error_otp_send_generic'));
     } finally {
@@ -499,7 +494,6 @@ class _LoginViewState extends State<LoginView> {
       }
       _showSnack(msg);
     } catch (e) {
-      debugPrint('Verify OTP error: $e');
       _showSnack(Utils.getString(context, 'login__error_verify_generic'));
     } finally {
       if (mounted) setState(() => _isVerifying = false);
@@ -582,7 +576,6 @@ class _LoginViewState extends State<LoginView> {
           try {
             await PsSharedPreferences.instance.clearPendingReferralCode();
           } catch (e) {
-            debugPrint('clearPendingReferralCode error: $e');
           }
         }
 
@@ -642,7 +635,22 @@ class _LoginViewState extends State<LoginView> {
           return;
         }
 
+        // ✅ Ensure local default interests exist before syncing to server.
+        // This also fixes stale hasFavCategories=true with an empty local list.
+        await DefaultInterestsBootstrapper.ensureDefaultInterests(
+          context: context,
+          valueHolder: psValueHolder,
+          force: false,
+          syncToServerIfLoggedIn: false,
+          source: 'login_after_success_ensure',
+        );
+        await _restoreLocalInterestsBeforeLoginSync(context);
         await _syncGuestPreferencesToServer(context, userId);
+        await DefaultInterestsBootstrapper.syncLocalInterestsToServerIfLoggedIn(
+          context: context,
+          valueHolder: psValueHolder,
+          source: 'login_after_success_sync',
+        );
         await syncPendingFollowsAfterLogin(context, sp);
 
         await HomeProvider.of(context, listen: false)
@@ -685,7 +693,6 @@ class _LoginViewState extends State<LoginView> {
         );
       }
     } catch (e) {
-      debugPrint('onLoginSuccess error: $e');
       _showSnack(Utils.getString(context, 'login__error_complete_login'));
     }
   }
@@ -769,7 +776,6 @@ class _LoginViewState extends State<LoginView> {
       }
 
       if (phone.isEmpty) {
-        debugPrint('⚠️ Cannot update user name: user_phone is empty');
         return;
       }
 
@@ -782,10 +788,8 @@ class _LoginViewState extends State<LoginView> {
       final PsResource<ps_user.User> res = await provider.postProfileUpdate(body);
 
       if (res.status != PsStatus.SUCCESS) {
-        debugPrint('⚠️ Failed to update user name: ${res.message}');
       }
     } catch (e) {
-      debugPrint('updateUserNameOnServer error: $e');
     }
   }
 
@@ -807,7 +811,6 @@ class _LoginViewState extends State<LoginView> {
       }
 
       if (phone.isEmpty) {
-        debugPrint('⚠️ Cannot update user profile photo: user_phone is empty');
         return;
       }
 
@@ -821,10 +824,38 @@ class _LoginViewState extends State<LoginView> {
       final PsResource<ps_user.User> res = await provider.postProfileUpdate(body);
 
       if (res.status != PsStatus.SUCCESS) {
-        debugPrint('⚠️ Failed to update user profile photo: ${res.message}');
       }
     } catch (e) {
-      debugPrint('updateUserProfilePhotoOnServer error: $e');
+    }
+  }
+
+  Future<void> _restoreLocalInterestsBeforeLoginSync(
+      BuildContext context,
+      ) async {
+    try {
+      final HomeProvider homeProvider = HomeProvider.of(context, listen: false);
+
+      try {
+        await (homeProvider as dynamic).loadList();
+      } catch (_) {}
+      try {
+        await (homeProvider as dynamic).loadSelectedList();
+      } catch (_) {}
+      try {
+        await (homeProvider as dynamic).loadSavedList();
+      } catch (_) {}
+      try {
+        await (homeProvider as dynamic).getSavedList();
+      } catch (_) {}
+      try {
+        await (homeProvider as dynamic).getList();
+      } catch (_) {}
+
+      if (homeProvider.retrieveList().isNotEmpty) {
+        homeProvider.saveList();
+        await PsSharedPreferences.instance.replaceHasFavCategories(true);
+      }
+    } catch (e) {
     }
   }
 
@@ -880,11 +911,9 @@ class _LoginViewState extends State<LoginView> {
         await tempProvider.postSubCategorySubscribe(holder.toMap());
 
         if (res.status != PsStatus.SUCCESS) {
-          debugPrint('⚠️ Failed to sync prefs for cat ${entry.key} : ${res.message}');
         }
       }
     } catch (e) {
-      debugPrint('syncGuestPreferencesToServer error: $e');
     }
   }
 
@@ -946,7 +975,6 @@ class _LoginViewState extends State<LoginView> {
       final String? age = (psValueHolder as dynamic).userAgeRange as String?;
       final String name = _nameController.text.trim();
 
-      debugPrint('✅ Onboarding update => name="$name", gender="$gender", age="$age"');
 
       if ((gender == null || gender.isEmpty) && (age == null || age.isEmpty)) {
         return;
@@ -959,7 +987,6 @@ class _LoginViewState extends State<LoginView> {
       }
 
       if (phone.isEmpty) {
-        debugPrint('⚠️ Cannot update user gender/age: user_phone is empty');
         return;
       }
 
@@ -974,10 +1001,8 @@ class _LoginViewState extends State<LoginView> {
       final PsResource<ps_user.User> res = await provider.postProfileUpdate(body);
 
       if (res.status != PsStatus.SUCCESS) {
-        debugPrint('⚠️ Failed to update user gender/age: ${res.message}');
       }
     } catch (e) {
-      debugPrint('updateUserGenderAgeOnServer error: $e');
     }
   }
 
