@@ -1,7 +1,6 @@
 // import UIKit
 // import Flutter
 // import Firebase
-// import GoogleMaps
 
 // @UIApplicationMain
 // @objc class AppDelegate: FlutterAppDelegate {
@@ -58,7 +57,6 @@
 import UIKit
 import Flutter
 import Firebase
-import GoogleMaps
 import google_mobile_ads
 
 @UIApplicationMain

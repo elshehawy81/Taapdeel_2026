@@ -223,7 +223,6 @@ class PsConfig {
 // --------------------------------------------------
 // Map / Google Maps (commented configs)
 // --------------------------------------------------
-// static const bool isUseGoogleMap = false;
 
 // --------------------------------------------------
 // Promote Item (commented configs)

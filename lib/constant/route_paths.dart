@@ -127,9 +127,7 @@ class RoutePaths {
   static const String filterExpantion = '/FilterExpantion';
   static const String itemSort = '/ItemSort';
   static const String mapFilter = '/mapFilter';
-  static const String googleMapFilter = '/googleMapFilter';
   static const String mapPin = '/mapPin';
-  static const String googleMapPin = '/googleMapPin';
   static const String commentList = '/CommentList';
   static const String commentDetail = '/CommentDetail';
   static const String trendingCategoryList = '/Trending Category List';
@@ -168,7 +166,6 @@ class RoutePaths {
   // --------------------------------------------------
   static const String itemEntryView = '/itemEntryView';
   static const String itemEntry = '/itemEntry';
-  static const String itemEntryGoogleMap = '/itemEntryGoogleMap';
   static const String itemType = '/itemType';
   static const String itemCondition = '/itemCondition';
   static const String itemPriceType = '/itemPriceType';

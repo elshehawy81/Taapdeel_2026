@@ -34,7 +34,6 @@ class PSMobileConfigSetting extends PsObject<PSMobileConfigSetting?> {
     this.bluemarkSize,
     this.mile,
     this.videoDuration,
-    this.isUseGoogleMap,
     this.profileImageSize,
     this.uploadImageSize,
     this.chatImageSize,
@@ -81,7 +80,6 @@ class PSMobileConfigSetting extends PsObject<PSMobileConfigSetting?> {
   String? bluemarkSize;
   String? mile;
   String? videoDuration;
-  String? isUseGoogleMap;
   String? profileImageSize;
   String? uploadImageSize;
   String? chatImageSize;
@@ -142,7 +140,6 @@ class PSMobileConfigSetting extends PsObject<PSMobileConfigSetting?> {
           bluemarkSize : dynamicData['blue_mark_size'],
           mile : dynamicData['mile'],
           videoDuration : dynamicData['video_duration'],
-          isUseGoogleMap : dynamicData['is_use_googlemap'],
           profileImageSize : dynamicData['profile_image_size'],
           uploadImageSize : dynamicData['upload_image_size'],
           chatImageSize : dynamicData['chat_image_size'],
@@ -196,7 +193,6 @@ class PSMobileConfigSetting extends PsObject<PSMobileConfigSetting?> {
       data['blue_mark_size'] = object.bluemarkSize;
       data['mile'] = object.mile;
       data['video_duration'] = object.videoDuration;
-      data['is_use_googlemap'] = object.isUseGoogleMap;
       data['profile_image_size'] = object.profileImageSize;
       data['upload_image_size'] = object.uploadImageSize;
       data['chat_image_size'] = object.chatImageSize;

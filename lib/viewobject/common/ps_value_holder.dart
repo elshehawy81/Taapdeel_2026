@@ -78,7 +78,6 @@ class PsValueHolder {
     required this.bluemarkSize,
     required this.mile,
     required this.videoDuration,
-    required this.isUseGoogleMap,
     required this.profileImageSize,
     required this.uploadImageSize,
     required this.chatImageSize,
@@ -205,7 +204,6 @@ class PsValueHolder {
   double? bluemarkSize;
   String? mile;
   String? videoDuration;
-  bool? isUseGoogleMap;
   int? profileImageSize;
   int? uploadImageSize;
   int? chatImageSize;

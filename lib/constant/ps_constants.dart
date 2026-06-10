@@ -476,7 +476,6 @@ class PsConst {
   static const String BLUEMARKSIZE = 'BLUEMARKSIZE';
   static const String MILE = 'MILE';
   static const String VIDEODURATION = 'VIDEODURATION';
-  static const String ISUSEGOOGLEMAP = 'ISUSEGOOGLEMAP';
   static const String PROFILEIMAGESIZE = 'PROFILEIMAGESIZE';
   static const String UPLOADIMAGESIZE = 'UPLOADIMAGESIZE';
   static const String CHATIMAGESIZE = 'CHATIMAGESIZE';

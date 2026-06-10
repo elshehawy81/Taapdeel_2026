@@ -227,8 +227,6 @@ class PsSharedPreferences {
     final String _mile = shared.getString(PsConst.MILE) ?? '8';
     final String _videoDuration =
         shared.getString(PsConst.VIDEODURATION) ?? '60000';
-    final bool _isUseGoogleMap =
-        shared.getBool(PsConst.ISUSEGOOGLEMAP) ?? false;
     final int _profileImageSize =
         shared.getInt(PsConst.PROFILEIMAGESIZE) ?? 512;
     final int _uploadImageSize = shared.getInt(PsConst.UPLOADIMAGESIZE) ?? 1024;
@@ -336,7 +334,6 @@ class PsSharedPreferences {
       bluemarkSize: _bluemarkSize,
       mile: _mile,
       videoDuration: _videoDuration,
-      isUseGoogleMap: _isUseGoogleMap,
       profileImageSize: _profileImageSize,
       uploadImageSize: _uploadImageSize,
       chatImageSize: _chatImageSize,
@@ -527,8 +524,6 @@ class PsSharedPreferences {
     await shared.setString(PsConst.MILE, psMobileConfigSetting.mile ?? '8');
     await shared.setString(
         PsConst.VIDEODURATION, psMobileConfigSetting.videoDuration ?? '60000');
-    await shared.setBool(PsConst.ISUSEGOOGLEMAP,
-        psMobileConfigSetting.isUseGoogleMap == '1'); //*** */
     await shared.setInt(PsConst.PROFILEIMAGESIZE,
         int.parse(psMobileConfigSetting.profileImageSize ?? '512'));
     await shared.setInt(PsConst.UPLOADIMAGESIZE,
