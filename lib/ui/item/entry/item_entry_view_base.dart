@@ -34,7 +34,6 @@ import 'package:taapdeel/viewobject/common/ps_value_holder.dart';
 import 'package:taapdeel/viewobject/default_photo.dart';
 import 'package:taapdeel/viewobject/holder/image_reorder_parameter_holder.dart';
 import 'package:taapdeel/viewobject/product.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart' as googlemap;
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -102,7 +101,7 @@ class _ItemEntryViewBaseState extends State<ItemEntryViewBase>
   final TextEditingController userInputPrice = TextEditingController();
   final TextEditingController userInputDiscount = TextEditingController();
   final MapController mapController = MapController();
-  googlemap.GoogleMapController? googleMapController;
+
 
   final TextEditingController categoryController = TextEditingController();
   final TextEditingController subCategoryController = TextEditingController();
@@ -262,9 +261,7 @@ class _ItemEntryViewBaseState extends State<ItemEntryViewBase>
     _uploadDialogDismissing = false;
   }
 
-  dynamic updateMapController(googlemap.GoogleMapController mapController) {
-    googleMapController = mapController;
-  }
+
 
   @override
   void initState() {
@@ -2021,10 +2018,6 @@ class _ItemEntryViewBaseState extends State<ItemEntryViewBase>
                                         isImageSelected: isImageSelected,
                                         isSelectedVideoImagePath:
                                         isSelectedVideoImagePath,
-                                        updateMapController:
-                                        updateMapController,
-                                        googleMapController:
-                                        googleMapController,
                                         currentStep: _currentStep,
                                         onHighQualityChanged: (bool v) {
                                           if (!mounted) return;

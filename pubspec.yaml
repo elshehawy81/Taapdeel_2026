@@ -109,7 +109,6 @@ dependencies:
   flutter_image_compress: ^2.1.0
   #firebase_dynamic_links: 5.3.5
   flutter_linkify: 5.0.2
-  google_maps_flutter: 2.2.4
   flutter_datetime_picker_plus: 2.0.1
   file_picker: ^8.0.0
   video_thumbnail: 0.5.3

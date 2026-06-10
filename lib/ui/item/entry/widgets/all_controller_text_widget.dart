@@ -28,7 +28,6 @@ import 'package:taapdeel/viewobject/common/ps_value_holder.dart';
 import 'package:taapdeel/viewobject/holder/item_entry_parameter_holder.dart';
 import 'package:taapdeel/viewobject/product.dart';
 import 'package:taapdeel/viewobject/sub_category.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart' as googlemap;
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -95,8 +94,6 @@ class AllControllerTextWidget extends StatefulWidget {
     this.localShareImagePathResolver,
     required this.isImageSelected,
     this.isSelectedVideoImagePath,
-    this.googleMapController,
-    this.updateMapController,
     required this.currentStep,
     this.packagingController,
     this.onHighQualityChanged,
@@ -152,8 +149,6 @@ class AllControllerTextWidget extends StatefulWidget {
   final String Function()? localShareImagePathResolver;
   final List<bool> isImageSelected;
   final bool? isSelectedVideoImagePath;
-  final googlemap.GoogleMapController? googleMapController;
-  final Function(googlemap.GoogleMapController controller)? updateMapController;
   final TextEditingController? packagingController;
   final int currentStep;
 
@@ -240,7 +235,6 @@ class AllControllerTextWidgetState extends State<AllControllerTextWidget> {
 
   PsValueHolder? valueHolder;
   late ItemEntryProvider itemEntryProvider;
-  late googlemap.CameraPosition kGooglePlex;
 
   String _normalizeTag(String value) {
     return value.trim().toLowerCase();
@@ -1423,10 +1417,7 @@ class AllControllerTextWidgetState extends State<AllControllerTextWidget> {
 
     _latlng ??= widget.latlng ?? const LatLng(0.0, 0.0);
 
-    kGooglePlex = googlemap.CameraPosition(
-      target: googlemap.LatLng(_latlng!.latitude, _latlng!.longitude),
-      zoom: widget.zoom ?? 13.0,
-    );
+
 
     final bool titleFilled = _isFilledTextCtrl(widget.userInputListingTitle);
     final bool descFilled = _isFilledTextCtrl(widget.userInputDescription);
