@@ -96,8 +96,8 @@ class HomeProvider extends ChangeNotifier {
   /// ✅ تفعيل زر طلب التبديل — يتطلب منتج مختار + مرشح مختار + منتج معتمد
   bool get canSubmitSwap =>
       myProduct != null &&
-      selectedSwapProduct != null &&
-      !isMyProductPending;
+          selectedSwapProduct != null &&
+          !isMyProductPending;
 
   // ==========================================================
   // ✅ NEW: Auto select guard (مرة واحدة فقط)
@@ -109,8 +109,8 @@ class HomeProvider extends ChangeNotifier {
     _autoSelectedMyProductOnce = false;
   }
 
-  /// ✅ Auto-select أول منتج للمستخدم (مرة واحدة) بعد التحميل
-  Future<void> autoSelectMiddleMyProductIfNeeded() async {
+  /// ✅ Auto-select آخر منتج للمستخدم (مرة واحدة) بعد التحميل
+  Future<void> autoSelectLastMyProductIfNeeded() async {
     if (_autoSelectedMyProductOnce) return;
 
     if (myProduct != null) {
@@ -122,11 +122,10 @@ class HomeProvider extends ChangeNotifier {
 
     _autoSelectedMyProductOnce = true;
 
-    final int midIndex = myProducts.length ~/ 2;
-    final Product midProduct = myProducts[midIndex];
+    final Product lastProduct = myProducts.last;
 
-    // ✅ اختر الأوسط + اعرض الترشيحات تلقائيًا
-    await setSelectedMyProduct(midProduct, fetchRecommendations: true);
+    // ✅ اختر آخر منتج تمت إضافته + اعرض الترشيحات تلقائيًا
+    await setSelectedMyProduct(lastProduct, fetchRecommendations: true);
   }
 
   /// ✅ اختيار منتج المستخدم
@@ -140,12 +139,22 @@ class HomeProvider extends ChangeNotifier {
     selectedSwapProduct = null;
     sellerProduct = null;
 
-    notifyListeners();
+    // ✅ أي اختيار مباشر من المستخدم أو الاختيار التلقائي يمنع إعادة الاختيار
+    // فوقه مرة أخرى من أي مكان آخر.
+    _autoSelectedMyProductOnce = myItemId.isNotEmpty;
 
-    // ✅ خلي الترشيحات async في الخلفية دايماً بغض النظر عن حالة الموافقة
     if (fetchRecommendations && myItemId.isNotEmpty) {
-      topRecProduct(PsUrl.ps_top_recom_url); // ✅ no await
+      // ✅ نظّف الترشيحات القديمة فورًا حتى لا تعرض الصفحة منتجًا قديمًا
+      // أثناء تحميل ترشيحات المنتج الجديد.
+      recProducts = <Product>[];
+      recLoading = true;
+      notifyListeners();
+
+      await topRecProduct(PsUrl.ps_top_recom_url);
+      return;
     }
+
+    notifyListeners();
   }
 
 
@@ -235,7 +244,7 @@ class HomeProvider extends ChangeNotifier {
           _autoSelectedMyProductOnce = false; // ✅ لو فاضية نرجّعها
         } else {
           // ✅ Auto select أول منتج مرة واحدة فقط
-          await autoSelectMiddleMyProductIfNeeded();
+          await autoSelectLastMyProductIfNeeded();
         }
 
         myProductLoading = false;
@@ -520,7 +529,7 @@ class HomeProvider extends ChangeNotifier {
   Future<void> submitSwap({required BuildContext context}) async {
     if (!canSubmitSwap) {
       if (isMyProductPending) {
-        Fluttertoast.showToast(msg: 'منتجك لسه في انتظار موافقة الأدمن');
+        Fluttertoast.showToast(msg: 'يمكنك طلب التبديل بعد موافقه الادمن لنشر منتجك');
       } else {
         Fluttertoast.showToast(msg: 'اختر منتجك ومنتج للتبديل أولاً');
       }

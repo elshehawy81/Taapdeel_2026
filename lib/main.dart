@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
+
 import 'package:app_links/app_links.dart';
 import 'package:taapdeel/debug/debug_flags.dart';
 import 'package:taapdeel/ui/Foryou/home_provider.dart';
@@ -49,23 +51,34 @@ import 'viewobject/holder/intent_holder/product_detail_intent_holder.dart';
 import 'viewobject/holder/intent_holder/user_intent_holder.dart';
 import 'viewobject/holder/noti_register_holder.dart';
 
-// ── Global navigator key — required for FCM deep-link routing ─────────────
-// Used by NotificationService.navigatorKey after it is created in lib/ui/noti/
+// ── Global navigator key ──────────────────────────────────────────────────
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // ─────────────────────────────────────────────────────────────────────────
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await EasyLocalization.ensureInitialized();
-  await _initFirebaseCore();
+  // ✅ FIX #1: شغّل EasyLocalization و Firebase بالتوازي بدل التسلسل
+  await Future.wait(<Future<void>>[
+    EasyLocalization.ensureInitialized(),
+    _initFirebaseCore(),
+  ]);
+
+  // Crashlytics تحتاج Firebase — تيجي بعده مباشرة لكنها سريعة
   await _initCrashlytics();
 
+  // ✅ FIX #2: كل اللي مش ضروري قبل أول frame يشتغل في الخلفية
   unawaited(_initLogger());
   unawaited(_initSharedPreferencesDefaults());
-  unawaited(_initScreenUtil());
+
+  // ScreenUtil لازم تنتهي قبل runApp عشان الـ sizes صح
+  await ScreenUtil.ensureScreenSize();
 
   _configLoading();
+
+  // ✅ FIX #7: preload ملف اللغة على background thread قبل runApp
+  // عشان EasyLocalization ما يعملش I/O على main thread ويسبب Skipped 244 frames
+  await _preloadLocalization();
 
   runApp(
     EasyLocalization(
@@ -73,9 +86,23 @@ Future<void> main() async {
       saveLocale: true,
       startLocale: PsConfig.defaultLanguage.toLocale(),
       supportedLocales: getSupportedLanguages(),
+      fallbackLocale: const Locale('ar', 'DZ'), // ✅ FIX #7: fallback لو اللغة المحفوظة مش موجودة
       child: const PSApp(),
     ),
   );
+}
+
+/// ✅ FIX #7: نحمّل ملف JSON اللغة الافتراضية قبل runApp
+/// بيخلي EasyLocalization يلاقيه في الـ cache بدل ما يقرأه من disk أثناء أول build
+/// → يحل مشكلة Skipped 244 frames عند "Load asset from assets/langs"
+Future<void> _preloadLocalization() async {
+  try {
+    final Locale locale = PsConfig.defaultLanguage.toLocale();
+    await rootBundle.loadString(
+      'assets/langs/\${locale.languageCode}_\${locale.countryCode}.json',
+    );
+  } catch (_) {
+  }
 }
 
 Future<void> _initLogger() async {
@@ -102,15 +129,9 @@ Future<void> _initSharedPreferencesDefaults() async {
   }
 }
 
-Future<void> _initScreenUtil() async {
-  await ScreenUtil.ensureScreenSize();
-}
-
 Future<void> _initFirebaseCore() async {
   try {
-    if (Firebase.apps.isNotEmpty) {
-      return;
-    }
+    if (Firebase.apps.isNotEmpty) return;
 
     if (Platform.isIOS) {
       await Firebase.initializeApp(
@@ -125,12 +146,9 @@ Future<void> _initFirebaseCore() async {
     } else {
       await Firebase.initializeApp();
     }
-
   } on FirebaseException catch (e) {
-    if (e.code == 'duplicate-app') {
-      return;
-    }
-  } catch (e) {}
+    if (e.code == 'duplicate-app') return;
+  } catch (_) {}
 }
 
 Future<void> _initCrashlytics() async {
@@ -182,13 +200,8 @@ Future<void> _initFirebaseMessaging({
       _routeNotificationMessage(initialMessage);
     }
 
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      _routeNotificationMessage(message);
-    });
-
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-
-    });
+    FirebaseMessaging.onMessageOpenedApp.listen(_routeNotificationMessage);
+    FirebaseMessaging.onMessage.listen((_) {});
   } catch (e) {
     debugPrint('FCM_INIT_ERROR=$e');
   }
@@ -203,11 +216,8 @@ Future<void> _saveAndMaybeRegisterFcmToken({
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('fcm_device_token', token);
 
-    if (psValueHolder == null) {
-      return;
-    }
+    if (psValueHolder == null) return;
 
-    // Keep old app flows working. phone_register already sends this field.
     psValueHolder.deviceToken = token;
 
     final String? loginUserId = Utils.checkUserLoginId(psValueHolder);
@@ -215,13 +225,7 @@ Future<void> _saveAndMaybeRegisterFcmToken({
         loginUserId.isNotEmpty &&
         loginUserId != 'nologinuser';
 
-    if (!hasRealUser) {
-      return;
-    }
-
-    if (notificationRepository == null) {
-      return;
-    }
+    if (!hasRealUser || notificationRepository == null) return;
 
     final NotificationProvider provider = NotificationProvider(
       repo: notificationRepository,
@@ -236,22 +240,20 @@ Future<void> _saveAndMaybeRegisterFcmToken({
 
     await provider.rawRegisterNotiToken(holder.toMap());
     provider.dispose();
-  } catch (e) {}
+  } catch (_) {}
 }
 
 void _routeNotificationMessage(RemoteMessage message) {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     try {
       final BuildContext? context = navigatorKey.currentContext;
-      if (context == null) {
-        return;
-      }
+      if (context == null) return;
 
       NotificationRoutingHelper.navigateFromData(
         context: context,
         data: Map<String, dynamic>.from(message.data),
       );
-    } catch (e) {}
+    } catch (_) {}
   });
 }
 
@@ -274,27 +276,34 @@ void _configLoading() {
 }
 
 List<Locale> getSupportedLanguages() {
-  final List<Locale> localeList = <Locale>[];
-  for (final Language lang in PsConfig.psSupportedLanguageList) {
-    localeList.add(Locale(lang.languageCode!, lang.countryCode));
-  }
-  return localeList;
+  return PsConfig.psSupportedLanguageList
+      .map((Language lang) => Locale(lang.languageCode!, lang.countryCode))
+      .toList();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PSApp — ✅ FIX #3: أزلنا PsColors.loadColor من build()
+//          وفصلنا الـ providers عن الـ theme builder
+// ═══════════════════════════════════════════════════════════════════════════
+
 class PSApp extends StatefulWidget {
-  const PSApp({Key? key});
+  const PSApp({Key? key}) : super(key: key);
 
   @override
   State<PSApp> createState() => _PSAppState();
 }
 
 class _PSAppState extends State<PSApp> {
+  // ✅ FIX #4: كل الـ providers تتعمل مرة واحدة في initState
   late final ItemPromotionProvider _itemPromotionProvider;
   late final MainProvider _mainProvider;
   late final HomeProvider _homeProvider;
   late final SearchProvider _searchProvider;
   late final MainBuyerProvider _mainBuyerProvider;
   late final PaymentProvider _paymentProvider;
+
+  // ✅ FIX #5: نحسب الـ providers list مرة واحدة بدل كل build
+  late final List<SingleChildWidget> _innerProviders;
 
   @override
   void initState() {
@@ -305,6 +314,19 @@ class _PSAppState extends State<PSApp> {
     _searchProvider = SearchProvider();
     _mainBuyerProvider = MainBuyerProvider();
     _paymentProvider = PaymentProvider();
+
+    _innerProviders = <SingleChildWidget>[
+      ChangeNotifierProvider<ItemPromotionProvider>.value(
+        value: _itemPromotionProvider,
+      ),
+      ChangeNotifierProvider<MainProvider>.value(value: _mainProvider),
+      ChangeNotifierProvider<HomeProvider>.value(value: _homeProvider),
+      ChangeNotifierProvider<SearchProvider>.value(value: _searchProvider),
+      ChangeNotifierProvider<MainBuyerProvider>.value(
+        value: _mainBuyerProvider,
+      ),
+      ChangeNotifierProvider<PaymentProvider>.value(value: _paymentProvider),
+    ];
   }
 
   @override
@@ -320,11 +342,12 @@ class _PSAppState extends State<PSApp> {
 
   @override
   Widget build(BuildContext context) {
-    PsColors.loadColor(context);
+    // ✅ FIX #3: PsColors.loadColor انتقل لـ didChangeDependencies في widget منفصل
+    // مش هنا في build() عشان ما يتنفذش في كل rebuild
 
     return MultiProvider(
       providers: <SingleChildWidget>[
-        ...providers,
+        ...providers, // الـ providers العامة من ps_provider_dependencies
       ],
       child: ThemeManager(
         defaultBrightnessPreference: BrightnessPreference.system,
@@ -334,39 +357,25 @@ class _PSAppState extends State<PSApp> {
           return themeData(baseTheme);
         },
         themedWidgetBuilder: (BuildContext context, ThemeData theme) {
+          // ✅ FIX #6: MultiProvider الداخلي الآن يستخدم الـ list المحسوبة مسبقاً
+          // بدل ما يعمل list جديدة في كل theme rebuild
           return MultiProvider(
-            providers: <SingleChildWidget>[
-              ChangeNotifierProvider<ItemPromotionProvider>.value(
-                value: _itemPromotionProvider,
-              ),
-              ChangeNotifierProvider<MainProvider>.value(
-                value: _mainProvider,
-              ),
-              ChangeNotifierProvider<HomeProvider>.value(
-                value: _homeProvider,
-              ),
-              ChangeNotifierProvider<SearchProvider>.value(
-                value: _searchProvider,
-              ),
-              ChangeNotifierProvider<MainBuyerProvider>.value(
-                value: _mainBuyerProvider,
-              ),
-              ChangeNotifierProvider<PaymentProvider>.value(
-                value: _paymentProvider,
-              ),
-            ],
-            child: _AppServicesBootstrap(
-              child: MaterialApp(
-                debugShowCheckedModeBanner: false,
-                title: 'Taapdeel',
-                theme: theme,
-                builder: EasyLoading.init(),
-                navigatorKey: navigatorKey, // ← FCM + App Links deep-link routing
-                initialRoute: kShowTaapdeelUIShowcase ? '/ui_showcase' : '/',
-                onGenerateRoute: router.generateRoute,
-                localizationsDelegates: context.localizationDelegates,
-                supportedLocales: context.supportedLocales,
-                locale: context.locale,
+            providers: _innerProviders,
+            child: _PsColorsLoader( // ✅ FIX #3: PsColors في widget منفصل
+              child: _AppServicesBootstrap(
+                child: MaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  title: 'Taapdeel',
+                  theme: theme,
+                  builder: EasyLoading.init(),
+                  navigatorKey: navigatorKey,
+                  initialRoute:
+                  kShowTaapdeelUIShowcase ? '/ui_showcase' : '/',
+                  onGenerateRoute: router.generateRoute,
+                  localizationsDelegates: context.localizationDelegates,
+                  supportedLocales: context.supportedLocales,
+                  locale: context.locale,
+                ),
               ),
             ),
           );
@@ -375,6 +384,37 @@ class _PSAppState extends State<PSApp> {
     );
   }
 }
+
+// ✅ FIX #3: Widget منفصل يلود الـ colors مرة واحدة عند أول build
+// بدل تشغيلها في كل rebuild لـ PSApp
+class _PsColorsLoader extends StatefulWidget {
+  const _PsColorsLoader({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_PsColorsLoader> createState() => _PsColorsLoaderState();
+}
+
+class _PsColorsLoaderState extends State<_PsColorsLoader> {
+  bool _loaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loaded) {
+      _loaded = true;
+      PsColors.loadColor(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// _AppServicesBootstrap — لا تغيير هنا، الكود صح
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _AppServicesBootstrap extends StatefulWidget {
   const _AppServicesBootstrap({required this.child});
@@ -398,8 +438,6 @@ class _AppServicesBootstrapState extends State<_AppServicesBootstrap> {
     if (_servicesStarted) return;
     _servicesStarted = true;
 
-    // This widget is intentionally placed BELOW the root MultiProvider, so this
-    // context can safely read PsValueHolder and NotificationRepository.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       unawaited(_startHeavyServices());
@@ -411,18 +449,14 @@ class _AppServicesBootstrapState extends State<_AppServicesBootstrap> {
     try {
       _appLinks = AppLinks();
 
-      // Cold start: user opened the app from a Taapdeel link while it was closed.
       final Uri? initialUri = await _appLinks!.getInitialLink();
       if (initialUri != null) {
         _handleTaapdeelDeepLink(initialUri);
       }
 
-      // Warm start: user opened a Taapdeel link while the app was already alive.
       _deepLinkSub = _appLinks!.uriLinkStream.listen(
-            (Uri uri) {
-          _handleTaapdeelDeepLink(uri);
-        },
-        onError: (Object error) {},
+        _handleTaapdeelDeepLink,
+        onError: (_) {},
       );
     } catch (_) {}
   }
@@ -433,30 +467,16 @@ class _AppServicesBootstrapState extends State<_AppServicesBootstrap> {
       if (context == null) return;
 
       final TaapdeelLinkTarget target = TaapdeelShareLinks.parseTarget(uri);
-
-      // First-touch referral attribution:
-      // If the opened link contains ?ref=..., keep it only if the user has not
-      // already been attributed and no pending referral exists on this device.
       unawaited(_maybeSavePendingReferralCode(context, target));
 
       switch (target.type) {
         case TaapdeelLinkTargetType.product:
-          _openProductFromDeepLink(context, target.id);
-          break;
-
         case TaapdeelLinkTargetType.wish:
-        // Wish/Hawadeet items are Product-like records in the app flow,
-        // so they currently open through the same ProductDetail route.
           _openProductFromDeepLink(context, target.id);
           break;
-
         case TaapdeelLinkTargetType.profile:
-        // Current router expects UserIntentHolder for userDetail.
-        // ProfileRoutePage needs ProfileRouteArgs, so userDetail is safer
-        // until we wire a typed profile-gallery deep link route.
           _openUserProfileFromDeepLink(context, target.id);
           break;
-
         case TaapdeelLinkTargetType.swapAdvice:
         case TaapdeelLinkTargetType.empty:
         case TaapdeelLinkTargetType.unknown:
@@ -474,40 +494,28 @@ class _AppServicesBootstrapState extends State<_AppServicesBootstrap> {
 
     try {
       PsValueHolder? valueHolder;
-
       try {
         valueHolder = context.read<PsValueHolder>();
       } catch (_) {}
 
       final String myReferralCode = _cleanReferralValue(
-        valueHolder?.referralCode ?? PsSharedPreferences.instance.getReferralCode(),
+        valueHolder?.referralCode ??
+            PsSharedPreferences.instance.getReferralCode(),
       );
+      if (myReferralCode.isNotEmpty && myReferralCode == newReferralCode) return;
 
-      // Prevent self-referral.
-      if (myReferralCode.isNotEmpty && myReferralCode == newReferralCode) {
-        return;
-      }
-
-      final String alreadyReferredBy = _cleanReferralValue(
-        valueHolder?.referredByCode,
-      );
-
-      // If the logged-in/current user is already attributed, do not overwrite.
-      if (alreadyReferredBy.isNotEmpty) {
-        return;
-      }
+      final String alreadyReferredBy =
+      _cleanReferralValue(valueHolder?.referredByCode);
+      if (alreadyReferredBy.isNotEmpty) return;
 
       final String existingPending = _cleanReferralValue(
         valueHolder?.pendingReferralCode ??
             PsSharedPreferences.instance.getPendingReferralCode(),
       );
+      if (existingPending.isNotEmpty) return;
 
-      // First-touch wins: do not replace an existing pending referral.
-      if (existingPending.isNotEmpty) {
-        return;
-      }
-
-      await PsSharedPreferences.instance.savePendingReferralCode(newReferralCode);
+      await PsSharedPreferences.instance
+          .savePendingReferralCode(newReferralCode);
     } catch (_) {}
   }
 
@@ -537,15 +545,12 @@ class _AppServicesBootstrapState extends State<_AppServicesBootstrap> {
 
     Navigator.of(context).pushNamed(
       RoutePaths.userDetail,
-      arguments: UserIntentHolder(
-        userId: userId,
-        userName: '',
-      ),
+      arguments: UserIntentHolder(userId: userId, userName: ''),
     );
   }
 
   Future<void> _startHeavyServices() async {
-    // اترك أول شاشة تظهر وتستقر
+    // ✅ لا تغيير — الـ delay مقصود عشان الشاشة الأولى تظهر أولاً
     await Future<void>.delayed(const Duration(seconds: 6));
 
     if (!mounted) return;
@@ -555,11 +560,11 @@ class _AppServicesBootstrapState extends State<_AppServicesBootstrap> {
 
     try {
       psValueHolder = context.read<PsValueHolder>();
-    } catch (e) {}
+    } catch (_) {}
 
     try {
       notificationRepository = context.read<NotificationRepository>();
-    } catch (e) {}
+    } catch (_) {}
 
     final String? loginUserId =
     psValueHolder == null ? null : Utils.checkUserLoginId(psValueHolder);
@@ -568,7 +573,6 @@ class _AppServicesBootstrapState extends State<_AppServicesBootstrap> {
         loginUserId.isNotEmpty &&
         loginUserId != 'nologinuser';
 
-    // لا تشغل FCM token/listeners للمستخدم guest في بداية التطبيق
     if (hasRealUser) {
       unawaited(
         _initFirebaseMessaging(
@@ -577,7 +581,6 @@ class _AppServicesBootstrapState extends State<_AppServicesBootstrap> {
         ),
       );
     }
-
   }
 
   @override

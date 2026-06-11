@@ -74,6 +74,10 @@ import 'package:taapdeel/viewobject/common/ps_value_holder.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
+// ✅ FIX: استبدلنا ProxyProvider بـ ProxyProvider مع حماية "don't recreate"
+// الـ pattern الصح: لو الـ previous != null → رجّع القديم، متعملش instance جديدة
+// ده بيمنع الـ dispose المتكرر ويوقف الـ skipped frames اللي سببها إعادة بناء ~30 repo
+
 List<SingleChildWidget> providers = <SingleChildWidget>[
   ...independentProviders,
   ..._dependentProviders,
@@ -82,19 +86,15 @@ List<SingleChildWidget> providers = <SingleChildWidget>[
 
 List<SingleChildWidget> independentProviders = <SingleChildWidget>[
   Provider<PsSharedPreferences>.value(value: PsSharedPreferences.instance),
-
   Provider<PsApiService>.value(value: PsApiService()),
   Provider<CategoryDao>.value(value: CategoryDao()),
   Provider<CategoryMapDao>.value(value: CategoryMapDao.instance),
   Provider<UserMapDao>.value(value: UserMapDao.instance),
-  Provider<SubCategoryDao>.value(
-      value: SubCategoryDao()), //wrong type not contain instance
-  Provider<ProductDao>.value(
-      value: ProductDao.instance), //correct type with instance
+  Provider<SubCategoryDao>.value(value: SubCategoryDao()),
+  Provider<ProductDao>.value(value: ProductDao.instance),
   Provider<ProductMapDao>.value(value: ProductMapDao.instance),
   Provider<NotiDao>.value(value: NotiDao.instance),
-  Provider<OfflinePaymentMethodDao>.value(
-      value: OfflinePaymentMethodDao.instance),
+  Provider<OfflinePaymentMethodDao>.value(value: OfflinePaymentMethodDao.instance),
   Provider<AboutUsDao>.value(value: AboutUsDao.instance),
   Provider<PackageDao>.value(value: PackageDao.instance),
   Provider<PackageTransactionDao>.value(value: PackageTransactionDao.instance),
@@ -104,8 +104,7 @@ List<SingleChildWidget> independentProviders = <SingleChildWidget>[
   Provider<RelatedProductDao>.value(value: RelatedProductDao.instance),
   Provider<RatingDao>.value(value: RatingDao.instance),
   Provider<ItemLocationDao>.value(value: ItemLocationDao.instance),
-  Provider<ItemLocationTownshipDao>.value(
-      value: ItemLocationTownshipDao.instance),
+  Provider<ItemLocationTownshipDao>.value(value: ItemLocationTownshipDao.instance),
   Provider<PaidAdItemDao>.value(value: PaidAdItemDao.instance),
   Provider<HistoryDao>.value(value: HistoryDao.instance),
   Provider<GalleryDao>.value(value: GalleryDao.instance),
@@ -125,214 +124,148 @@ List<SingleChildWidget> independentProviders = <SingleChildWidget>[
 ];
 
 List<SingleChildWidget> _dependentProviders = <SingleChildWidget>[
+  // ✅ كل ProxyProvider دلوقتي بيرجع الـ instance القديمة لو موجودة
+  // بدل ما يعمل new instance في كل rebuild → بيوقف الـ dispose المتكرر
+
   ProxyProvider<PsSharedPreferences, PsThemeRepository>(
-    update: (_, PsSharedPreferences ssSharedPreferences,
-            PsThemeRepository? psThemeRepository) =>
-        PsThemeRepository(psSharedPreferences: ssSharedPreferences),
+    update: (_, PsSharedPreferences sp, PsThemeRepository? prev) =>
+    prev ?? PsThemeRepository(psSharedPreferences: sp),
   ),
   ProxyProvider<PsApiService, AppInfoRepository>(
-    update:
-        (_, PsApiService psApiService, AppInfoRepository? appInfoRepository) =>
-            AppInfoRepository(psApiService: psApiService),
+    update: (_, PsApiService api, AppInfoRepository? prev) =>
+    prev ?? AppInfoRepository(psApiService: api),
   ),
   ProxyProvider<PsSharedPreferences, SwapProductsProvider>(
-    update: (_, PsSharedPreferences ssSharedPreferences,
-            SwapProductsProvider? appInfoRepository) =>
-        SwapProductsProvider(sharedPref: ssSharedPreferences),
+    update: (_, PsSharedPreferences sp, SwapProductsProvider? prev) =>
+    prev ?? SwapProductsProvider(sharedPref: sp),
   ),
   ProxyProvider<PsSharedPreferences, LanguageRepository>(
-    update: (_, PsSharedPreferences ssSharedPreferences,
-            LanguageRepository? languageRepository) =>
-        LanguageRepository(psSharedPreferences: ssSharedPreferences),
+    update: (_, PsSharedPreferences sp, LanguageRepository? prev) =>
+    prev ?? LanguageRepository(psSharedPreferences: sp),
   ),
   ProxyProvider<PsApiService, NotificationRepository>(
-    update: (_, PsApiService psApiService,
-            NotificationRepository? userRepository) =>
-        NotificationRepository(
-      psApiService: psApiService,
-    ),
+    update: (_, PsApiService api, NotificationRepository? prev) =>
+    prev ?? NotificationRepository(psApiService: api),
   ),
   ProxyProvider<PsApiService, ItemPaidHistoryRepository>(
-    update: (_, PsApiService psApiService,
-            ItemPaidHistoryRepository? itemPaidHistoryRepository) =>
-        ItemPaidHistoryRepository(psApiService: psApiService),
+    update: (_, PsApiService api, ItemPaidHistoryRepository? prev) =>
+    prev ?? ItemPaidHistoryRepository(psApiService: api),
   ),
   ProxyProvider2<PsApiService, CategoryDao, ClearAllDataRepository>(
-    update: (_, PsApiService psApiService, CategoryDao categoryDao,
-            ClearAllDataRepository? clearAllDataRepository) =>
-        ClearAllDataRepository(),
+    update: (_, PsApiService api, CategoryDao dao, ClearAllDataRepository? prev) =>
+    prev ?? ClearAllDataRepository(),
   ),
   ProxyProvider<PsApiService, DeleteTaskRepository>(
-    update: (_, PsApiService psApiService,
-            DeleteTaskRepository? deleteTaskRepository) =>
-        DeleteTaskRepository(),
+    update: (_, PsApiService api, DeleteTaskRepository? prev) =>
+    prev ?? DeleteTaskRepository(),
   ),
   ProxyProvider<PsApiService, ContactUsRepository>(
-    update: (_, PsApiService psApiService,
-            ContactUsRepository? apiStatusRepository) =>
-        ContactUsRepository(psApiService: psApiService),
+    update: (_, PsApiService api, ContactUsRepository? prev) =>
+    prev ?? ContactUsRepository(psApiService: api),
   ),
-
-  ProxyProvider2<PsApiService, ItemLocationTownshipDao,
-      ItemLocationTownshipRepository>(
-    update: (_,
-            PsApiService psApiService,
-            ItemLocationTownshipDao itemLocationTownshipDao,
-            ItemLocationTownshipRepository? itemLocationTownshipRepository) =>
-        ItemLocationTownshipRepository(
-            psApiService: psApiService,
-            itemLocationTownshipDao: itemLocationTownshipDao),
+  ProxyProvider2<PsApiService, ItemLocationTownshipDao, ItemLocationTownshipRepository>(
+    update: (_, PsApiService api, ItemLocationTownshipDao dao, ItemLocationTownshipRepository? prev) =>
+    prev ?? ItemLocationTownshipRepository(psApiService: api, itemLocationTownshipDao: dao),
   ),
-
   ProxyProvider2<PsApiService, CategoryDao, CategoryRepository>(
-    update: (_, PsApiService psApiService, CategoryDao categoryDao,
-            CategoryRepository? categoryRepository2) =>
-        CategoryRepository(
-            psApiService: psApiService, categoryDao: categoryDao),
+    update: (_, PsApiService api, CategoryDao dao, CategoryRepository? prev) =>
+    prev ?? CategoryRepository(psApiService: api, categoryDao: dao),
   ),
   ProxyProvider2<PsApiService, UserDao, SearchUserRepository>(
-    update: (_, PsApiService psApiService, UserDao userDao,
-            SearchUserRepository? categoryRepository2) =>
-        SearchUserRepository(psApiService: psApiService, userDao: userDao),
+    update: (_, PsApiService api, UserDao dao, SearchUserRepository? prev) =>
+    prev ?? SearchUserRepository(psApiService: api, userDao: dao),
   ),
-
   ProxyProvider2<PsApiService, SubCategoryDao, SubCategoryRepository>(
-    update: (_, PsApiService psApiService, SubCategoryDao subCategoryDao,
-            SubCategoryRepository? subCategoryRepository) =>
-        SubCategoryRepository(
-            psApiService: psApiService, subCategoryDao: subCategoryDao),
+    update: (_, PsApiService api, SubCategoryDao dao, SubCategoryRepository? prev) =>
+    prev ?? SubCategoryRepository(psApiService: api, subCategoryDao: dao),
   ),
   ProxyProvider2<PsApiService, ProductDao, ProductRepository>(
-    update: (_, PsApiService psApiService, ProductDao productDao,
-            ProductRepository? categoryRepository2) =>
-        ProductRepository(psApiService: psApiService, productDao: productDao),
+    update: (_, PsApiService api, ProductDao dao, ProductRepository? prev) =>
+    prev ?? ProductRepository(psApiService: api, productDao: dao),
   ),
   ProxyProvider2<PsApiService, NotiDao, NotiRepository>(
-    update: (_, PsApiService psApiService, NotiDao notiDao,
-            NotiRepository? notiRepository) =>
-        NotiRepository(psApiService: psApiService, notiDao: notiDao),
+    update: (_, PsApiService api, NotiDao dao, NotiRepository? prev) =>
+    prev ?? NotiRepository(psApiService: api, notiDao: dao),
   ),
   ProxyProvider2<PsApiService, AboutUsDao, AboutUsRepository>(
-    update: (_, PsApiService psApiService, AboutUsDao aboutUsDao,
-            AboutUsRepository? aboutUsRepository) =>
-        AboutUsRepository(psApiService: psApiService, aboutUsDao: aboutUsDao),
+    update: (_, PsApiService api, AboutUsDao dao, AboutUsRepository? prev) =>
+    prev ?? AboutUsRepository(psApiService: api, aboutUsDao: dao),
   ),
   ProxyProvider2<PsApiService, PackageDao, PackageBoughtRepository>(
-    update: (_, PsApiService psApiService, PackageDao packageDao,
-            PackageBoughtRepository? packageRepository) =>
-        PackageBoughtRepository(
-            psApiService: psApiService, packageDao: packageDao),
+    update: (_, PsApiService api, PackageDao dao, PackageBoughtRepository? prev) =>
+    prev ?? PackageBoughtRepository(psApiService: api, packageDao: dao),
   ),
-  ProxyProvider2<PsApiService, PackageTransactionDao,
-      PackageTranscationHistoryRepository>(
-    update: (_, PsApiService psApiService, PackageTransactionDao packageDao,
-            PackageTranscationHistoryRepository? packageRepository) =>
-        PackageTranscationHistoryRepository(
-            psApiService: psApiService, transactionDao: packageDao),
+  ProxyProvider2<PsApiService, PackageTransactionDao, PackageTranscationHistoryRepository>(
+    update: (_, PsApiService api, PackageTransactionDao dao, PackageTranscationHistoryRepository? prev) =>
+    prev ?? PackageTranscationHistoryRepository(psApiService: api, transactionDao: dao),
   ),
   ProxyProvider2<PsApiService, BlogDao, BlogRepository>(
-    update: (_, PsApiService psApiService, BlogDao blogDao,
-            BlogRepository? blogRepository) =>
-        BlogRepository(psApiService: psApiService, blogDao: blogDao),
+    update: (_, PsApiService api, BlogDao dao, BlogRepository? prev) =>
+    prev ?? BlogRepository(psApiService: api, blogDao: dao),
   ),
   ProxyProvider2<PsApiService, BlockedUserDao, BlockedUserRepository>(
-    update: (_, PsApiService psApiService, BlockedUserDao blockedUserDao,
-            BlockedUserRepository? blockedUserRepository) =>
-        BlockedUserRepository(
-            psApiService: psApiService, blockedUserDao: blockedUserDao),
+    update: (_, PsApiService api, BlockedUserDao dao, BlockedUserRepository? prev) =>
+    prev ?? BlockedUserRepository(psApiService: api, blockedUserDao: dao),
   ),
   ProxyProvider2<PsApiService, ItemLocationDao, ItemLocationRepository>(
-    update: (_, PsApiService psApiService, ItemLocationDao itemLocationDao,
-            ItemLocationRepository? itemLocationRepository) =>
-        ItemLocationRepository(
-            psApiService: psApiService, itemLocationDao: itemLocationDao),
+    update: (_, PsApiService api, ItemLocationDao dao, ItemLocationRepository? prev) =>
+    prev ?? ItemLocationRepository(psApiService: api, itemLocationDao: dao),
   ),
   ProxyProvider2<PsApiService, ItemTypeDao, ItemTypeRepository>(
-    update: (_, PsApiService psApiService, ItemTypeDao itemTypeDao,
-            ItemTypeRepository? itemTypeRepository) =>
-        ItemTypeRepository(
-            psApiService: psApiService, itemTypeDao: itemTypeDao),
+    update: (_, PsApiService api, ItemTypeDao dao, ItemTypeRepository? prev) =>
+    prev ?? ItemTypeRepository(psApiService: api, itemTypeDao: dao),
   ),
   ProxyProvider2<PsApiService, ReportedItemDao, ReportedItemRepository>(
-    update: (_, PsApiService psApiService, ReportedItemDao reportedItemDao,
-            ReportedItemRepository? itemTypeRepository) =>
-        ReportedItemRepository(
-            psApiService: psApiService, reportedItemDao: reportedItemDao),
+    update: (_, PsApiService api, ReportedItemDao dao, ReportedItemRepository? prev) =>
+    prev ?? ReportedItemRepository(psApiService: api, reportedItemDao: dao),
   ),
   ProxyProvider2<PsApiService, ItemConditionDao, ItemConditionRepository>(
-    update: (_, PsApiService psApiService, ItemConditionDao itemConditionDao,
-            ItemConditionRepository? itemConditionRepository) =>
-        ItemConditionRepository(
-            psApiService: psApiService, itemConditionDao: itemConditionDao),
+    update: (_, PsApiService api, ItemConditionDao dao, ItemConditionRepository? prev) =>
+    prev ?? ItemConditionRepository(psApiService: api, itemConditionDao: dao),
   ),
   ProxyProvider2<PsApiService, ItemPriceTypeDao, ItemPriceTypeRepository>(
-    update: (_, PsApiService psApiService, ItemPriceTypeDao itemPriceTypeDao,
-            ItemPriceTypeRepository? itemPriceTypeRepository) =>
-        ItemPriceTypeRepository(
-            psApiService: psApiService, itemPriceTypeDao: itemPriceTypeDao),
+    update: (_, PsApiService api, ItemPriceTypeDao dao, ItemPriceTypeRepository? prev) =>
+    prev ?? ItemPriceTypeRepository(psApiService: api, itemPriceTypeDao: dao),
   ),
-
   ProxyProvider2<PsApiService, ItemDealOptionDao, ItemDealOptionRepository>(
-    update: (_, PsApiService psApiService, ItemDealOptionDao itemDealOptionDao,
-            ItemDealOptionRepository? itemCurrencyRepository) =>
-        ItemDealOptionRepository(
-            psApiService: psApiService, itemDealOptionDao: itemDealOptionDao),
+    update: (_, PsApiService api, ItemDealOptionDao dao, ItemDealOptionRepository? prev) =>
+    prev ?? ItemDealOptionRepository(psApiService: api, itemDealOptionDao: dao),
   ),
   ProxyProvider2<PsApiService, ChatHistoryDao, ChatHistoryRepository>(
-    update: (_, PsApiService psApiService, ChatHistoryDao chatHistoryDao,
-            ChatHistoryRepository? chatHistoryRepository) =>
-        ChatHistoryRepository(
-            psApiService: psApiService, chatHistoryDao: chatHistoryDao),
+    update: (_, PsApiService api, ChatHistoryDao dao, ChatHistoryRepository? prev) =>
+    prev ?? ChatHistoryRepository(psApiService: api, chatHistoryDao: dao),
   ),
   ProxyProvider2<PsApiService, OfferDao, OfferRepository>(
-    update: (_, PsApiService psApiService, OfferDao offerDao,
-            OfferRepository? offerRepository) =>
-        OfferRepository(psApiService: psApiService, offerDao: offerDao),
+    update: (_, PsApiService api, OfferDao dao, OfferRepository? prev) =>
+    prev ?? OfferRepository(psApiService: api, offerDao: dao),
   ),
-  ProxyProvider2<PsApiService, UserUnreadMessageDao,
-      UserUnreadMessageRepository>(
-    update: (_,
-            PsApiService psApiService,
-            UserUnreadMessageDao userUnreadMessageDao,
-            UserUnreadMessageRepository? userUnreadMessageRepository) =>
-        UserUnreadMessageRepository(
-            psApiService: psApiService,
-            userUnreadMessageDao: userUnreadMessageDao),
+  ProxyProvider2<PsApiService, UserUnreadMessageDao, UserUnreadMessageRepository>(
+    update: (_, PsApiService api, UserUnreadMessageDao dao, UserUnreadMessageRepository? prev) =>
+    prev ?? UserUnreadMessageRepository(psApiService: api, userUnreadMessageDao: dao),
   ),
   ProxyProvider2<PsApiService, RatingDao, RatingRepository>(
-    update: (_, PsApiService psApiService, RatingDao ratingDao,
-            RatingRepository? ratingRepository) =>
-        RatingRepository(psApiService: psApiService, ratingDao: ratingDao),
+    update: (_, PsApiService api, RatingDao dao, RatingRepository? prev) =>
+    prev ?? RatingRepository(psApiService: api, ratingDao: dao),
   ),
   ProxyProvider2<PsApiService, PaidAdItemDao, PaidAdItemRepository>(
-    update: (_, PsApiService psApiService, PaidAdItemDao paidAdItemDao,
-            PaidAdItemRepository? paidAdItemRepository) =>
-        PaidAdItemRepository(
-            psApiService: psApiService, paidAdItemDao: paidAdItemDao),
+    update: (_, PsApiService api, PaidAdItemDao dao, PaidAdItemRepository? prev) =>
+    prev ?? PaidAdItemRepository(psApiService: api, paidAdItemDao: dao),
   ),
   ProxyProvider2<PsApiService, HistoryDao, HistoryRepository>(
-    update: (_, PsApiService psApiService, HistoryDao historyDao,
-            HistoryRepository? historyRepository) =>
-        HistoryRepository(historyDao: historyDao),
+    update: (_, PsApiService api, HistoryDao dao, HistoryRepository? prev) =>
+    prev ?? HistoryRepository(historyDao: dao),
   ),
   ProxyProvider2<PsApiService, GalleryDao, GalleryRepository>(
-    update: (_, PsApiService psApiService, GalleryDao galleryDao,
-            GalleryRepository? galleryRepository) =>
-        GalleryRepository(galleryDao: galleryDao, psApiService: psApiService),
+    update: (_, PsApiService api, GalleryDao dao, GalleryRepository? prev) =>
+    prev ?? GalleryRepository(galleryDao: dao, psApiService: api),
   ),
   ProxyProvider3<PsApiService, UserDao, UserLoginDao, UserRepository>(
-    update: (_, PsApiService psApiService, UserDao userDao,
-            UserLoginDao userLoginDao, UserRepository? userRepository) =>
-        UserRepository(
-            psApiService: psApiService,
-            userDao: userDao,
-            userLoginDao: userLoginDao),
+    update: (_, PsApiService api, UserDao userDao, UserLoginDao loginDao, UserRepository? prev) =>
+    prev ?? UserRepository(psApiService: api, userDao: userDao, userLoginDao: loginDao),
   ),
   ProxyProvider2<PsApiService, SoldOutItemDao, SoldOutItemRepository>(
-    update: (_, PsApiService psApiService, SoldOutItemDao soldOutItemDao,
-            SoldOutItemRepository? soldOutItemRepository) =>
-        SoldOutItemRepository(
-            psApiService: psApiService, soldOutItemDao: soldOutItemDao),
+    update: (_, PsApiService api, SoldOutItemDao dao, SoldOutItemRepository? prev) =>
+    prev ?? SoldOutItemRepository(psApiService: api, soldOutItemDao: dao),
   ),
 ];
 
@@ -340,6 +273,6 @@ List<SingleChildWidget> _valueProviders = <SingleChildWidget>[
   StreamProvider<PsValueHolder?>(
     initialData: null,
     create: (BuildContext context) =>
-        Provider.of<PsSharedPreferences>(context, listen: false).psValueHolder,
+    Provider.of<PsSharedPreferences>(context, listen: false).psValueHolder,
   ),
 ];

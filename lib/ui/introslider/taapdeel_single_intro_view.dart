@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 /// Standalone Single Intro page.
@@ -27,7 +25,7 @@ class TaapdeelSingleIntroView extends StatefulWidget {
     Key? key,
     this.logoAsset = 'assets/images/Taapdeel_logo.png',
     this.heroAsset = 'assets/images/taapdeel_intro_center_illustration.png',
-    this.buttonText = 'ابدأ',
+    this.buttonText = 'إبدأ',
     this.showSkipButton = true,
     this.onStart,
     this.onSkip,
@@ -52,6 +50,7 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
   late final AnimationController _sceneController;      // per-step scene timeline
   late final AnimationController _logoPulse;
   late final AnimationController _buttonShimmer;
+  late final AnimationController _nextHintController;
 
   // ── sequential reveal controllers (first load) ────────────────────────────
   late final AnimationController _stepperRevealController;   // title + stepper
@@ -69,7 +68,8 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
   /// 0 = Add product, 1 = Compare, 2 = Safe swap, 3 = final hero artwork.
   int _stageIndex = 0;
   bool _userInteracted = false;
-  bool _firstLoadDone = false;  // becomes true once all 3 reveal layers have fired
+  bool _firstLoadDone = false;
+  bool _nextHintReady = false;  // becomes true once all 3 reveal layers have fired
 
   static const Duration _sceneDuration    = Duration(milliseconds: 6800);
   static const Duration _stepHoldDuration = Duration(milliseconds: 7600);
@@ -112,6 +112,14 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
       duration: const Duration(milliseconds: 2300),
     )..repeat();
 
+    _nextHintController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 780),
+      animationBehavior: AnimationBehavior.preserve,
+    );
+
+    _sceneController.addStatusListener(_handleSceneStatus);
+
     // Reveal controllers – all start at 0 and play once.
     _stepperRevealController = AnimationController(
       vsync: this,
@@ -147,7 +155,6 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
       _sceneRevealController.forward().whenComplete(() {
         if (!mounted) return;
         _firstLoadDone = true;
-        _scheduleNextStage();
       });
     });
   }
@@ -161,10 +168,13 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
     _stageTransitionSubtitleTimer?.cancel();
     _stageTransitionSceneTimer?.cancel();
 
+    _sceneController.removeStatusListener(_handleSceneStatus);
+
     _introController.dispose();
     _sceneController.dispose();
     _logoPulse.dispose();
     _buttonShimmer.dispose();
+    _nextHintController.dispose();
     _stepperRevealController.dispose();
     _subtitleRevealController.dispose();
     _sceneRevealController.dispose();
@@ -179,7 +189,32 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
     );
   }
 
+  void _handleSceneStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted || _stageIndex >= 3) {
+      return;
+    }
+
+    if (!_nextHintReady) {
+      setState(() => _nextHintReady = true);
+    }
+
+    if (!_nextHintController.isAnimating) {
+      _nextHintController.repeat(reverse: true);
+    }
+  }
+
+  void _resetNextHint() {
+    _nextHintController
+      ..stop()
+      ..reset();
+
+    if (_nextHintReady) {
+      setState(() => _nextHintReady = false);
+    }
+  }
+
   void _restartSceneController() {
+    _resetNextHint();
     _sceneController
       ..stop()
       ..reset()
@@ -216,13 +251,9 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
   }
 
   void _scheduleNextStage() {
+    // Auto stage navigation is intentionally disabled.
+    // The user moves forward only by tapping the quick next arrow.
     _stageTimer?.cancel();
-    if (_userInteracted || _stageIndex >= 3) return;
-
-    _stageTimer = Timer(_stepHoldDuration, () {
-      if (!mounted) return;
-      _goToStage(_stageIndex + 1, manual: false);
-    });
   }
 
   void _goToStage(int index, {required bool manual}) {
@@ -241,9 +272,6 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
       _restartContentReveal();
     }
 
-    if (!manual) {
-      _scheduleNextStage();
-    }
   }
 
   void _goToStep(int stepIndex, {required bool manual}) {
@@ -276,7 +304,7 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
       _firstLoadDone = true;
     }
 
-    _goToStage(_stageIndex + 1, manual: false);
+    _goToStage(_stageIndex + 1, manual: true);
   }
 
   void _previousStage() {
@@ -350,6 +378,11 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
                             veryCompact:          veryCompact,
                             onStepTap: (int index) => _goToStep(index, manual: true),
                             onQuickNextTap: _quickNextStage,
+                            nextHint: _nextHintController,
+                            nextHintReady: _nextHintReady,
+                            nextHintLabel: _stageIndex == 0
+                                ? 'خطوه 2'
+                                : (_stageIndex == 1 ? 'خطوه 3' : null),
                           ),
                         ),
                       ),
@@ -374,9 +407,10 @@ class _TaapdeelSingleIntroViewState extends State<TaapdeelSingleIntroView>
                       children: <Widget>[
                         Expanded(
                           child: _PrimaryIntroButton(
-                            text:    widget.buttonText,
+                            text: widget.buttonText,
                             shimmer: _buttonShimmer,
-                            onTap:   _start,
+                            isFinalState: _isFinalHeroStage,
+                            onTap: _start,
                           ),
                         ),
                       ],
@@ -465,19 +499,19 @@ const List<_StepData> _introStepItems = <_StepData>[
   _StepData(
     number:   '1',
     title:    'صوّر منتجاتك',
-    subtitle: 'تبديل هتحلل وتستكمل بيانات منتجاتك بالذكاء الاصطناعي',
+    subtitle: 'صور منتجاتك والباقي علينا \nهنتعرف وندخل بيانات منتجاتك بالذكاء الاصطناعي',
     icon:     Icons.camera_alt_rounded,
   ),
   _StepData(
     number:   '2',
     title:    'قارن بين الترشيحات',
-    subtitle: 'هنقدملك ترشيحات مناسبة لاهتماماتك ومنطقتك ودائرة معارفك',
+    subtitle: ' ترشيحات مناسبة لاهتماماتك \n مرتبه بناء على المكان والجوده وصاحب المنتج',
     icon:     Icons.compare_arrows_rounded,
   ),
   _StepData(
     number:   '3',
     title:    'بدّل بأمان',
-    subtitle: 'بدّل مع الأصدقاء والأقارب والعائلة بثقة أكبر',
+    subtitle: 'بدّل وانت مطمن\n ترشيحات من اصدقاءك واقاربك مناسبة لك',
     icon:     Icons.verified_user_rounded,
   ),
 ];
@@ -631,6 +665,9 @@ class _SetupLikeContentCard extends StatelessWidget {
     required this.veryCompact,
     required this.onStepTap,
     required this.onQuickNextTap,
+    required this.nextHint,
+    required this.nextHintReady,
+    required this.nextHintLabel,
   });
 
   final int  stageIndex;
@@ -645,6 +682,9 @@ class _SetupLikeContentCard extends StatelessWidget {
   final bool veryCompact;
   final ValueChanged<int> onStepTap;
   final VoidCallback onQuickNextTap;
+  final AnimationController nextHint;
+  final bool nextHintReady;
+  final String? nextHintLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -678,6 +718,9 @@ class _SetupLikeContentCard extends StatelessWidget {
           veryCompact:      veryCompact,
           onStepTap:        onStepTap,
           onQuickNextTap:  onQuickNextTap,
+          nextHint:        nextHint,
+          nextHintReady:   nextHintReady,
+          nextHintLabel:   nextHintLabel,
         ),
       ),
     );
@@ -792,37 +835,20 @@ class _HeroMotivationSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize:      MainAxisSize.min,
             children: <Widget>[
-              Container(
-                width:  compact ? 28 : 32,
-                height: compact ? 28 : 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    begin:  AlignmentDirectional.topStart,
-                    end:    AlignmentDirectional.bottomEnd,
-                    colors: <Color>[Color(0xFF072D56), Color(0xFF0D5E7B), Color(0xFF24A9C4)],
-                  ),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(color: _C.teal.withOpacity(0.18), blurRadius: 10, offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: Icon(Icons.swap_horiz_rounded, color: Colors.white, size: compact ? 17 : 19),
-              ),
-              const SizedBox(width: 8),
               Text(
-                'مع تبديل',
+                'مع تبديل تقدر تجيب اللي نفسك فيه',
                 textAlign: TextAlign.center,
                 maxLines:  1,
                 overflow:  TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: _C.font, color: _C.deepNavy,
                   fontWeight: FontWeight.w900,
-                  fontSize:   compact ? 15 : 16.5, height: 1.15,
+                  fontSize:   compact ? 13 : 15, height: 1.15,
                 ),
               ),
             ],
           ),
-          SizedBox(height: compact ? 8 : 10),
+          SizedBox(height: compact ? 15 : 20),
           Row(
             children: List<Widget>.generate(_items.length, (int index) {
               return Expanded(
@@ -911,6 +937,9 @@ class _StepContentStage extends StatelessWidget {
     required this.veryCompact,
     required this.onStepTap,
     required this.onQuickNextTap,
+    required this.nextHint,
+    required this.nextHintReady,
+    required this.nextHintLabel,
   }) : super(key: key);
 
   final int  activeStepIndex;
@@ -924,6 +953,9 @@ class _StepContentStage extends StatelessWidget {
   final bool veryCompact;
   final ValueChanged<int> onStepTap;
   final VoidCallback onQuickNextTap;
+  final AnimationController nextHint;
+  final bool nextHintReady;
+  final String? nextHintLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -939,7 +971,14 @@ class _StepContentStage extends StatelessWidget {
               curve:  const Interval(0.00, 0.55, curve: Curves.easeOutCubic),
             ),
             dy: 10,
-            child: _StepperSectionTitle(compact: compact),
+            child: _StepperSectionTitle(
+              compact: compact,
+              showQuickNext: !showFinalHero,
+              onQuickNextTap: onQuickNextTap,
+              nextHint: nextHint,
+              nextHintReady: nextHintReady,
+              nextHintLabel: nextHintLabel,
+            ),
           ),
           SizedBox(height: compact ? 8 : 10),
 
@@ -996,7 +1035,7 @@ class _StepContentStage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(height: compact ? 10 : 12),
+
                 ],
 
                 // ── Layer 3: scene ──────────────────────────────────────────
@@ -1057,8 +1096,8 @@ class _SingleIntroStepSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
-      duration:        const Duration(milliseconds: 520),
-      reverseDuration: const Duration(milliseconds: 340),
+      duration:        const Duration(milliseconds: 400),
+      reverseDuration: const Duration(milliseconds: 280),
       switchInCurve:   Curves.easeOutCubic,
       switchOutCurve:  Curves.easeInCubic,
       transitionBuilder: (Widget child, Animation<double> animation) {
@@ -1075,13 +1114,13 @@ class _SingleIntroStepSwitcher extends StatelessWidget {
       },
       child: Column(
         key: ValueKey<int>(stepIndex),
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           if (stepIndex == 0)
             _AddProductAiScanScene(
               controller: controller,
               compact: compact,
-              onQuickNextTap: onQuickNextTap,
             )
           else if (stepIndex == 1)
             _CompareRecommendationsScene(controller: controller, compact: compact)
@@ -1136,21 +1175,55 @@ class _RevealFromAnimation extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _StepperSectionTitle extends StatelessWidget {
-  const _StepperSectionTitle({required this.compact});
+  const _StepperSectionTitle({
+    required this.compact,
+    required this.showQuickNext,
+    required this.onQuickNextTap,
+    required this.nextHint,
+    required this.nextHintReady,
+    required this.nextHintLabel,
+  });
+
   final bool compact;
+  final bool showQuickNext;
+  final VoidCallback onQuickNextTap;
+  final AnimationController nextHint;
+  final bool nextHintReady;
+  final String? nextHintLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
+    final Text title = Text(
       'خطوات بسيطة للتبديل',
-      textAlign: TextAlign.center,
-      maxLines:  1,
-      overflow:  TextOverflow.ellipsis,
+      textAlign: TextAlign.right,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: TextStyle(
-        fontFamily: _C.font, color: const Color(0xFF072D56),
+        fontFamily: _C.font,
+        color: const Color(0xFF072D56),
         fontWeight: FontWeight.w900,
-        fontSize:   compact ? 14.5 : 16, height: 1.25,
+        fontSize: compact ? 14.5 : 16,
+        height: 1.25,
       ),
+    );
+
+    if (!showQuickNext) {
+      return Center(child: title);
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        Expanded(child: title),
+        SizedBox(width: compact ? 8 : 10),
+        _QuickNextStageButton(
+          compact: compact,
+          onTap: onQuickNextTap,
+          hint: nextHint,
+          hintReady: nextHintReady,
+          hintLabel: nextHintLabel,
+        ),
+      ],
     );
   }
 }
@@ -1180,7 +1253,7 @@ class _IntroStepsStepper extends StatelessWidget {
         border:       Border.all(color: const Color(0xFF0C587A).withOpacity(0.06)),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           for (int index = 0; index < _introStepItems.length; index++) ...<Widget>[
             Expanded(
@@ -1194,7 +1267,7 @@ class _IntroStepsStepper extends StatelessWidget {
             ),
             if (index != _introStepItems.length - 1)
               Padding(
-                padding: EdgeInsets.only(top: compact ? 17 : 19),
+                padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 260),
                   curve:    Curves.easeOutCubic,
@@ -1202,7 +1275,7 @@ class _IntroStepsStepper extends StatelessWidget {
                   height:   2,
                   decoration: BoxDecoration(
                     color: index < activeIndex
-                        ? _C.teal.withOpacity(0.72)
+                        ? const Color(0xFF4FACFE).withOpacity(0.72)
                         : _C.softBorder.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(999),
                   ),
@@ -1224,70 +1297,245 @@ class _PlainStepperItem extends StatelessWidget {
     required this.onTap,
   });
 
-  final _StepData  data;
-  final bool       active;
-  final bool       completed;
-  final bool       compact;
+  final _StepData data;
+  final bool active;
+  final bool completed;
+  final bool compact;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Color circleBg     = active ? _C.teal : completed ? const Color(0xFF0D5E7B) : Colors.white;
-    final Color circleBorder = active || completed ? Colors.transparent : _C.softBorder.withOpacity(0.95);
-    final Color circleFg     = active || completed ? Colors.white : _C.teal;
-    final Color titleColor   = active ? _C.deepNavy : _C.softText.withOpacity(0.86);
+    final bool emphasized = active || completed;
+    final Color titleColor = emphasized ? Colors.white : _C.deepNavy;
+    final Color numberColor = emphasized ? _C.deepNavy : _C.teal;
+    final Color numberBg = emphasized ? Colors.white.withOpacity(0.96) : const Color(0xFFEAF8FF);
+
+    final LinearGradient cardGradient = active
+        ? const LinearGradient(
+      begin: AlignmentDirectional.topStart,
+      end: AlignmentDirectional.bottomEnd,
+      colors: <Color>[
+        Color(0xFF4FACFE),
+        Color(0xFF00F2FE),
+      ],
+    )
+        : completed
+        ? const LinearGradient(
+      begin: AlignmentDirectional.topStart,
+      end: AlignmentDirectional.bottomEnd,
+      colors: <Color>[
+        Color(0xFF061F3A),
+        Color(0xFF0D5E7B),
+        Color(0xFF24A9C4),
+      ],
+    )
+        : LinearGradient(
+      begin: AlignmentDirectional.topStart,
+      end: AlignmentDirectional.bottomEnd,
+      colors: <Color>[
+        Colors.white,
+        const Color(0xFFF3FBFE).withOpacity(0.98),
+      ],
+    );
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap:        onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          height: compact ? 64 : 72,
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 6 : 8,
+            vertical: compact ? 7 : 8,
+          ),
+          decoration: BoxDecoration(
+            gradient: cardGradient,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: emphasized ? Colors.white.withOpacity(0.0) : _C.softBorder.withOpacity(0.95),
+              width: 1.15,
+            ),
+            boxShadow: emphasized
+                ? <BoxShadow>[
+              BoxShadow(
+                color: active
+                    ? const Color(0xFF4FACFE).withOpacity(0.24)
+                    : _C.teal.withOpacity(0.14),
+                blurRadius: active ? 16 : 10,
+                offset: const Offset(0, 7),
+              ),
+            ]
+                : <BoxShadow>[
+              BoxShadow(
+                color: _C.navy.withOpacity(0.035),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               AnimatedContainer(
-                duration:  const Duration(milliseconds: 260),
-                curve:     Curves.easeOutCubic,
-                width:     compact ? 34 : 38,
-                height:    compact ? 34 : 38,
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOutCubic,
+                width: compact ? 20 : 22,
+                height: compact ? 20 : 22,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color:  circleBg,
-                  shape:  BoxShape.circle,
-                  border: Border.all(color: circleBorder, width: 1.2),
-                  boxShadow: active
-                      ? <BoxShadow>[BoxShadow(color: _C.teal.withOpacity(0.18), blurRadius: 12, offset: const Offset(0, 5))]
-                      : const <BoxShadow>[],
+                  color: numberBg,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(
+                    color: emphasized ? Colors.white.withOpacity(0.46) : _C.cyan.withOpacity(0.20),
+                  ),
                 ),
                 child: completed
-                    ? Icon(Icons.check_rounded, color: circleFg, size: compact ? 17 : 19)
+                    ? Icon(Icons.check_rounded, color: numberColor, size: compact ? 15 : 16)
                     : Text(
                   data.number,
                   style: TextStyle(
-                    fontFamily: _C.font, color: circleFg,
+                    fontFamily: _C.font,
+                    color: numberColor,
                     fontWeight: FontWeight.w900,
-                    fontSize:   compact ? 13 : 14, height: 1,
+                    fontSize: compact ? 11.5 : 12.5,
+                    height: 1.0,
                   ),
                 ),
               ),
-              SizedBox(height: compact ? 7 : 8),
-              Text(
-                data.title,
-                textAlign: TextAlign.center,
-                maxLines:  2,
-                overflow:  TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: _C.font, color: titleColor,
-                  fontWeight: FontWeight.w900,
-                  fontSize:   compact ? 10.8 : 12, height: 1.3,
+              SizedBox(height: compact ? 4 : 5),
+              Flexible(
+                child: Text(
+                  data.title,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: _C.font,
+                    color: titleColor,
+                    fontWeight: FontWeight.w900,
+                    fontSize: compact ? 9.2 : 10.2,
+                    height: 1.35,
+                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _QuickNextStageButton extends StatefulWidget {
+  const _QuickNextStageButton({
+    required this.compact,
+    required this.onTap,
+    required this.hint,
+    required this.hintReady,
+    required this.hintLabel,
+  });
+
+  final bool compact;
+  final VoidCallback onTap;
+  final Animation<double> hint;
+  final bool hintReady;
+  final String? hintLabel;
+
+  @override
+  State<_QuickNextStageButton> createState() => _QuickNextStageButtonState();
+}
+
+class _QuickNextStageButtonState extends State<_QuickNextStageButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: widget.hint,
+      builder: (BuildContext context, Widget? child) {
+        final double hintValue = widget.hintReady ? widget.hint.value : 0.0;
+        final double hintScale = widget.hintReady ? 1.0 + (hintValue * 0.10) : 1.0;
+
+        return GestureDetector(
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) {
+            setState(() => _pressed = false);
+            widget.onTap();
+          },
+          onTapCancel: () => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.94 : hintScale,
+            duration: const Duration(milliseconds: 130),
+            curve: Curves.easeOut,
+            child: Container(
+              height: widget.compact ? 34 : 38,
+              padding: EdgeInsetsDirectional.only(
+                start: widget.compact ? 12 : 14,
+                end: widget.compact ? 10 : 12,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (widget.hintReady && widget.hintLabel != null) ...<Widget>[
+                    AnimatedOpacity(
+                      opacity: widget.hintReady ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      child: Text(
+                        widget.hintLabel!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: _C.font,
+                          color: const Color(0xFF072D56),
+                          fontWeight: FontWeight.w900,
+                          fontSize: widget.compact ? 10.5 : 11.5,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: widget.compact ? 5 : 6),
+                  ],
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOutCubic,
+                    width: widget.compact ? 24 : 27,
+                    height: widget.compact ? 24 : 27,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: AlignmentDirectional.topStart,
+                        end: AlignmentDirectional.bottomEnd,
+                        colors: widget.hintReady
+                            ? const <Color>[Color(0xFF4FACFE), Color(0xFF00F2FE)]
+                            : const <Color>[Color(0xFF061F3A), Color(0xFF0D5E7B), Color(0xFF24A9C4)],
+                      ),
+                      boxShadow: widget.hintReady
+                          ? <BoxShadow>[
+                        BoxShadow(
+                          color: const Color(0xFF4FACFE).withOpacity(0.28 + (hintValue * 0.18)),
+                          blurRadius: 10 + (hintValue * 8),
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                          : null,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      color: Colors.white,
+                      size: widget.compact ? 16 : 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1313,31 +1561,17 @@ class _StepSceneSubtitle extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          Container(
-            width:  compact ? 28 : 32,
-            height: compact ? 28 : 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: <Color>[Color(0xFF24A9C4), Color(0xFF0D5E7B)],
-              ),
-              boxShadow: <BoxShadow>[
-                BoxShadow(color: _C.teal.withOpacity(0.16), blurRadius: 10, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Icon(Icons.auto_awesome_rounded, color: Colors.white, size: compact ? 15 : 17),
-          ),
-          const SizedBox(width: 9),
+
           Expanded(
             child: Text(
               text,
-              textAlign: TextAlign.right,
+              textAlign: TextAlign.center,
               maxLines:  2,
               overflow:  TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: _C.font, color: _C.deepNavy.withOpacity(0.86),
                 fontWeight: FontWeight.w800,
-                fontSize:   compact ? 11.4 : 12.5, height: 1.42,
+                fontSize:   compact ? 12 : 14, height: 1.42,
               ),
             ),
           ),
@@ -1359,12 +1593,10 @@ class _AddProductAiScanScene extends StatelessWidget {
   const _AddProductAiScanScene({
     required this.controller,
     required this.compact,
-    required this.onQuickNextTap,
   });
 
   final AnimationController controller;
   final bool compact;
-  final VoidCallback onQuickNextTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1478,15 +1710,6 @@ class _AddProductAiScanScene extends StatelessWidget {
                   ),
                 );
               }),
-              Positioned(
-                left: compact ? 10 : 12,
-                top: (cardHeight / 2) - (compact ? 19 : 22),
-                child: _InlineImageNextButton(
-                  controller: controller,
-                  compact: compact,
-                  onTap: onQuickNextTap,
-                ),
-              ),
             ],
           ),
         ),
@@ -1495,89 +1718,6 @@ class _AddProductAiScanScene extends StatelessWidget {
   }
 }
 
-
-class _InlineImageNextButton extends StatefulWidget {
-  const _InlineImageNextButton({
-    required this.controller,
-    required this.compact,
-    required this.onTap,
-  });
-
-  final AnimationController controller;
-  final bool compact;
-  final VoidCallback onTap;
-
-  @override
-  State<_InlineImageNextButton> createState() => _InlineImageNextButtonState();
-}
-
-class _InlineImageNextButtonState extends State<_InlineImageNextButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final double size = widget.compact ? 38 : 44;
-    final double iconSize = widget.compact ? 22 : 24;
-    final double lastTagBegin = _kTagBegins[_kTagBegins.length - 1];
-    final double appearEnd = (lastTagBegin + 0.08).clamp(0.0, 1.0);
-
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (_, __) {
-        final double fade = CurvedAnimation(
-          parent: widget.controller,
-          curve: Interval(lastTagBegin, appearEnd, curve: Curves.easeOutCubic),
-        ).value.clamp(0.0, 1.0);
-
-        return IgnorePointer(
-          ignoring: fade < 0.98,
-          child: Opacity(
-            opacity: fade,
-            child: Transform.translate(
-              offset: Offset((1 - fade) * -10, 0),
-              child: Transform.scale(
-                scale: (_pressed ? 0.92 : 1.0) * (0.82 + fade * 0.18),
-                child: GestureDetector(
-                  onTapDown: (_) => setState(() => _pressed = true),
-                  onTapUp: (_) {
-                    setState(() => _pressed = false);
-                    widget.onTap();
-                  },
-                  onTapCancel: () => setState(() => _pressed = false),
-                  child: Container(
-                    width: size,
-                    height: size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        begin: AlignmentDirectional.topStart,
-                        end: AlignmentDirectional.bottomEnd,
-                        colors: <Color>[Color(0xFF0FA3A6), Color(0xFF0D5E7B)],
-                      ),
-                      border: Border.all(color: Colors.white.withOpacity(0.86), width: 1.6),
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: const Color(0xFF061F3A).withOpacity(0.24),
-                          blurRadius: 14,
-                          offset: const Offset(0, 7),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.arrow_back_rounded,
-                      color: Colors.white,
-                      size: iconSize,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
 
 class _AiScanOverlay extends StatelessWidget {
   const _AiScanOverlay({required this.controller, required this.cardHeight});
@@ -2424,9 +2564,16 @@ class _SolidAiTagChip extends StatelessWidget {
 }
 
 class _PrimaryIntroButton extends StatefulWidget {
-  const _PrimaryIntroButton({required this.text, required this.shimmer, required this.onTap});
+  const _PrimaryIntroButton({
+    required this.text,
+    required this.shimmer,
+    required this.isFinalState,
+    required this.onTap,
+  });
+
   final String text;
   final AnimationController shimmer;
+  final bool isFinalState;
   final VoidCallback onTap;
 
   @override
@@ -2438,28 +2585,45 @@ class _PrimaryIntroButtonState extends State<_PrimaryIntroButton> {
 
   @override
   Widget build(BuildContext context) {
+    final bool filled = widget.isFinalState;
+    final Color fgColor = filled ? Colors.white : _C.deepNavy;
+    final List<Color> gradientColors = filled
+        ? const <Color>[Color(0xFF061F3A), Color(0xFF0D5E7B), Color(0xFF0FA3A6)]
+        : const <Color>[Color(0xFFFFFFFF), Color(0xFFF8FCFE), Color(0xFFEAF8FF)];
+
     return GestureDetector(
-      onTapDown:   (_) => setState(() => _pressed = true),
-      onTapUp:     (_) { setState(() => _pressed = false); widget.onTap(); },
-      onTapCancel: ()  => setState(() => _pressed = false),
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
-        scale:    _pressed ? 0.97 : 1.0,
+        scale: _pressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 130),
-        curve:    Curves.easeOut,
-        child: Container(
+        curve: Curves.easeOut,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeOutCubic,
           height: 52,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            gradient: const LinearGradient(
-              begin:  AlignmentDirectional.centerStart,
-              end:    AlignmentDirectional.centerEnd,
-              colors: <Color>[Color(0xFF061F3A), Color(0xFF0D5E7B), Color(0xFF0FA3A6)],
+            gradient: LinearGradient(
+              begin: AlignmentDirectional.centerStart,
+              end: AlignmentDirectional.centerEnd,
+              colors: gradientColors,
+            ),
+            border: Border.all(
+              color: filled ? Colors.transparent : _C.cyan.withOpacity(0.48),
+              width: 1.35,
             ),
             boxShadow: <BoxShadow>[
               BoxShadow(
-                color:      const Color(0xFF0D5E7B).withOpacity(_pressed ? 0.34 : 0.24),
+                color: (filled ? const Color(0xFF0D5E7B) : _C.teal).withOpacity(
+                  _pressed ? (filled ? 0.34 : 0.20) : (filled ? 0.24 : 0.13),
+                ),
                 blurRadius: _pressed ? 32 : 24,
-                offset:     const Offset(0, 12),
+                offset: const Offset(0, 12),
               ),
             ],
           ),
@@ -2467,43 +2631,56 @@ class _PrimaryIntroButtonState extends State<_PrimaryIntroButton> {
             borderRadius: BorderRadius.circular(999),
             child: Stack(
               children: <Widget>[
-                AnimatedBuilder(
-                  animation: widget.shimmer,
-                  builder: (_, __) => Positioned.fill(
-                    child: FractionalTranslation(
-                      translation: Offset((widget.shimmer.value * 2.4) - 1.2, 0),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          width: 90,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: <Color>[
-                                Colors.white.withOpacity(0.00),
-                                Colors.white.withOpacity(0.20),
-                                Colors.white.withOpacity(0.00),
-                              ],
+                if (filled)
+                  AnimatedBuilder(
+                    animation: widget.shimmer,
+                    builder: (_, __) => Positioned.fill(
+                      child: FractionalTranslation(
+                        translation: Offset((widget.shimmer.value * 2.4) - 1.2, 0),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            width: 90,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: <Color>[
+                                  Colors.white.withOpacity(0.00),
+                                  Colors.white.withOpacity(0.20),
+                                  Colors.white.withOpacity(0.00),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
                 Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        widget.text,
-                        style: const TextStyle(
-                          fontFamily: _C.font, color: Colors.white,
-                          fontSize: 16, fontWeight: FontWeight.w900,
+                  child: AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    style: TextStyle(
+                      fontFamily: _C.font,
+                      color: fgColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(widget.text),
+                        const SizedBox(width: 9),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: Icon(
+                            Icons.arrow_forward_rounded,
+                            key: ValueKey<bool>(filled),
+                            color: fgColor,
+                            size: 22,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 9),
-                      const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -2515,38 +2692,6 @@ class _PrimaryIntroButtonState extends State<_PrimaryIntroButton> {
   }
 }
 
-class _SecondaryIntroButton extends StatelessWidget {
-  const _SecondaryIntroButton({required this.text, required this.onTap});
-  final String text;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap:        onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          height:    52,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color:        Colors.white.withOpacity(0.92),
-            borderRadius: BorderRadius.circular(999),
-            border:       Border.all(color: _C.cyan.withOpacity(0.48), width: 1.4),
-          ),
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontFamily: _C.font, color: _C.deepNavy,
-              fontSize: 15, fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ImageFallback extends StatelessWidget {
   const _ImageFallback({required this.icon});

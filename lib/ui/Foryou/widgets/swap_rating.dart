@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:taapdeel/viewobject/product.dart';
 
@@ -111,7 +112,7 @@ SwapBadge swapBadgeFromPercent(int p) {
   }
 
   return const SwapBadge(
-    title: 'تبديل بنفس متوسط السعر',
+    title: 'بنفس متوسط السعر',
     icon: Icons.info_rounded,
     tone: SwapBadgeTone.neutral,
   );
@@ -703,14 +704,14 @@ double _estimateSingleSuggestedSwapCardHeight({
   required bool compact,
   Product? myProduct,
 }) {
-  // ✅ الـ chips دلوقتي سطر واحد أفقي بارتفاع ثابت
+  // ✅ التقييم انتقل داخل سيكشن المميزات، لذلك لا يوجد TopBar مستقل فوق الصور.
   final double verticalPadding = compact ? 20 : 24;
-  final double topBarHeight = 44;
-  final double gapAfterTopBar = 10;
+  final double topBarHeight = 0;
+  final double gapAfterTopBar = 0;
   final double compareRowHeight = compact ? 166 : 178;
   final double gapBeforeChips = 10;
-  final double chipsBlockHeight = compact ? 62 : 68; // +3/4px safety margin
-  final double bottomBuffer = compact ? 10 : 12;    // +4px to avoid overflow
+  final double chipsBlockHeight = compact ? 84 : 90; // header + inline score/reasons row
+  final double bottomBuffer = compact ? 10 : 12;     // safety margin يمنع أي overflow
 
   return verticalPadding +
       topBarHeight +
@@ -771,78 +772,240 @@ class SuggestedSwapReasonsGrid extends StatelessWidget {
     Key? key,
     required this.items,
     required this.compact,
+    this.vm,
   }) : super(key: key);
 
   final List<SwapCriterionItem> items;
   final bool compact;
+  final InlineSwapVM? vm;
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: 3,
-            end: 3,
-            bottom: 6,
-          ),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: compact ? 20 : 22,
-                height: compact ? 20 : 22,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEAF8FB),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(0xFFBFEAF0),
-                    width: 1,
-                  ),
-                ),
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  size: compact ? 13 : 14,
-                  color: const Color(0xFF149EB7),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'مميزات ترشيح التبديل',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF17425E),
-                    fontWeight: FontWeight.w900,
-                    fontSize: compact ? 10.8 : 11.5,
-                    height: 1.1,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    final InlineSwapVM? currentVm = vm;
 
-        // ✅ سطر واحد أفقي قابل للسحب — المستخدم يعمل scroll عشان يشوف الباقي
-        SizedBox(
-          height: compact ? 33 : 36,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, index) => SuggestedSwapReasonPill(
-              item: items[index],
-              compact: compact,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(
+          compact ? 8 : 10,
+          compact ? 8 : 10,
+          compact ? 8 : 10,
+          compact ? 8 : 10,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FDFF),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: const Color(0xFFD8EFF5),
+            width: 1,
+          ),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x0F0C587A),
+              blurRadius: 12,
+              offset: Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    'مميزات ترشيح التبديل',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF123B52),
+                      fontWeight: FontWeight.w900,
+                      fontSize: compact ? 12 : 13,
+                      height: 1.1,
+                    ),
+                  ),
+                ),
+                if (currentVm != null) ...<Widget>[
+                  const SizedBox(width: 8),
+                  _SuggestedSwapOpportunityHeaderBadge(
+                    vm: currentVm,
+                    compact: compact,
+                  ),
+                ],
+              ],
+            ),
+            SizedBox(height: compact ? 8 : 9),
+            SizedBox(
+              height: compact ? 34 : 37,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: items.length + (currentVm == null ? 0 : 1),
+                separatorBuilder: (_, __) => const SizedBox(width: 7),
+                itemBuilder: (_, index) {
+                  if (currentVm != null && index == 0) {
+                    return _SuggestedSwapInlineScoreCircle(
+                      vm: currentVm,
+                      compact: compact,
+                    );
+                  }
+
+                  final int itemIndex = currentVm == null ? index : index - 1;
+                  return SuggestedSwapReasonPill(
+                    item: items[itemIndex],
+                    compact: compact,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuggestedSwapOpportunityHeaderBadge extends StatelessWidget {
+  const _SuggestedSwapOpportunityHeaderBadge({
+    required this.vm,
+    required this.compact,
+  });
+
+  final InlineSwapVM vm;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final SwapBadgeStyle style = swapBadgeStyleForBadge(vm.badge);
+
+    return Container(
+      constraints: BoxConstraints(maxWidth: compact ? 104 : 118),
+      height: compact ? 28 : 30,
+      padding: EdgeInsetsDirectional.only(
+        start: compact ? 8 : 9,
+        end: compact ? 8 : 9,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: style.border,
+          width: 1.1,
+        ),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: style.glow,
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            vm.badge.icon,
+            size: compact ? 13 : 14,
+            color: style.textColor,
+          ),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              vm.badge.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: style.textColor,
+                fontWeight: FontWeight.w900,
+                fontSize: compact ? 9.8 : 10.5,
+                height: 1,
+              ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestedSwapInlineScoreCircle extends StatelessWidget {
+  const _SuggestedSwapInlineScoreCircle({
+    required this.vm,
+    required this.compact,
+  });
+
+  final InlineSwapVM vm;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final SwapBadgeStyle style = swapBadgeStyleForBadge(vm.badge);
+    final int safePercent = vm.percent.clamp(0, 100);
+    final double size = compact ? 34 : 37;
+
+    return Tooltip(
+      message: vm.badge.title,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          alignment: Alignment.center,
+          children: <Widget>[
+            SizedBox(
+              width: size,
+              height: size,
+              child: CircularProgressIndicator(
+                value: safePercent / 100,
+                strokeWidth: compact ? 3.0 : 3.2,
+                backgroundColor: const Color(0xFFE8F4F7),
+                valueColor: AlwaysStoppedAnimation<Color>(style.textColor),
+              ),
+            ),
+            Container(
+              width: size - 7,
+              height: size - 7,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(
+                  color: style.innerBorder,
+                  width: 1,
+                ),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: style.glow,
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Text(
+                    '$safePercent%',
+                    maxLines: 1,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: const Color(0xFF011934),
+                      fontWeight: FontWeight.w900,
+                      fontSize: compact ? 9 : 9.8,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

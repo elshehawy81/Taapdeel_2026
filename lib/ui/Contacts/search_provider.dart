@@ -85,6 +85,10 @@ class SearchProvider extends ChangeNotifier {
   // ✅ FIX: cache للـ prefcat IDs — لا نطلب السيرفر في كل fetch
   List<String>? _cachedPrefCatIds;
 
+  // ✅ Cache لفحص هل التصنيف فيه منتجات داخل سيكشن معين.
+  // يستخدمه Home لعرض chips التصنيفات التي تحتوي على منتجات فقط.
+  final Map<String, bool> _categoryHasProductsCache = <String, bool>{};
+
   /// استدعِ هذه الدالة لما المستخدم يغير اهتماماته
   void invalidatePrefCatCache() {
     _cachedPrefCatIds = null;
@@ -341,6 +345,7 @@ class SearchProvider extends ChangeNotifier {
     _sectionRequested.clear();
     _sectionSubCats.clear();
     _sectionSelectedSubCat.clear();
+    _categoryHasProductsCache.clear();
     notifyListeners();
   }
 
@@ -534,7 +539,7 @@ class SearchProvider extends ChangeNotifier {
   Future<void> loadInitialSection({
     required String filterUrl,
     required String catId,
-    int pageSize = 30,
+    int pageSize = 20,
   }) async {
     await loadSection(filterUrl: filterUrl, catId: catId, pageSize: pageSize);
   }
@@ -543,7 +548,7 @@ class SearchProvider extends ChangeNotifier {
     required String currentUrl,
     required String catId,
     required bool isLoggedIn,
-    int pageSize = 30,
+    int pageSize = 20,
   }) {
     final List<String> urlsToPreload = [
       PsUrl.ps_Prefcat_bulk_url,
@@ -573,6 +578,43 @@ class SearchProvider extends ChangeNotifier {
       loadSection(filterUrl: PsUrl.ps_friends_network_items_url, catId: '', pageSize: pageSize),
       loadSection(filterUrl: PsUrl.ps_family_network_items_url, catId: '', pageSize: pageSize),
     ]);
+  }
+
+  Future<bool> sectionCategoryHasProducts({
+    required String filterUrl,
+    required String catId,
+    int probeLimit = 1,
+  }) async {
+    final String cleanCatId = catId.trim();
+    if (cleanCatId.isEmpty) return true;
+
+    final String cacheKey =
+        '$filterUrl::$cleanCatId::${_locationId()}::${_townshipId()}';
+
+    final bool? cached = _categoryHasProductsCache[cacheKey];
+    if (cached != null) return cached;
+
+    try {
+      final List<Product> products = await _fetchProducts(
+        filterUrl: filterUrl,
+        catId: cleanCatId,
+        limit: probeLimit,
+        offset: 0,
+      );
+
+      final bool hasProducts = products.isNotEmpty;
+      _categoryHasProductsCache[cacheKey] = hasProducts;
+      return hasProducts;
+    } catch (e, st) {
+      tlog(
+        'CAT_PROBE_ERR',
+        'Failed to probe category products filterUrl=$filterUrl catId=$cleanCatId',
+        err: e,
+        st: st,
+      );
+      _categoryHasProductsCache[cacheKey] = false;
+      return false;
+    }
   }
 
   // =============================
@@ -905,86 +947,6 @@ class SearchProvider extends ChangeNotifier {
     }
   }
 
-  String _relationLabel(int relationType) {
-    switch (relationType) {
-      case 1:
-        return 'الأصدقاء';
-      case 2:
-        return 'العائلة';
-      case 3:
-        return 'الأبناء';
-      case 4:
-        return 'الوالدين';
-      case 5:
-        return 'الإخوة';
-      case 6:
-        return 'العائلة الكبيرة';
-      default:
-        return 'شبكة معارفك';
-    }
-  }
-
-  String _contactDisplayName(String userId) {
-    final String targetId = userId.trim();
-    if (targetId.isEmpty || usersPhone.isEmpty) return '';
-
-    for (final UsersPhoneModel user in usersPhone) {
-      if ((user.userId ?? '').trim() != targetId) continue;
-
-      final String name = _extractUserDisplayName(user);
-      if (name.isNotEmpty) return name;
-    }
-
-    return '';
-  }
-
-  String _extractUserDisplayName(dynamic user) {
-    final List<String?> values = <String?>[
-      _tryReadString(() => user.userName),
-      _tryReadString(() => user.username),
-      _tryReadString(() => user.name),
-      _tryReadString(() => user.user_name),
-      _tryReadString(() => user.userDisplayName),
-      _tryReadString(() => user.displayName),
-      _tryReadString(() => user.fullName),
-      _tryReadString(() => user.full_name),
-      _tryReadString(() => user.phoneName),
-      _tryReadString(() => user.phone_name),
-    ];
-
-    for (final String? value in values) {
-      final String clean = (value ?? '').trim();
-      if (clean.isNotEmpty && clean.toLowerCase() != 'null') return clean;
-    }
-
-    return '';
-  }
-
-  String? _tryReadString(Object? Function() getter) {
-    try {
-      final Object? value = getter();
-      if (value == null) return null;
-      return value.toString();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  void _showFollowSuccessToast({
-    required String displayName,
-    required String relationLabel,
-  }) {
-    final String cleanName = displayName.trim();
-
-    Fluttertoast.showToast(
-      msg: cleanName.isNotEmpty
-          ? 'تمت إضافة $cleanName إلى $relationLabel بنجاح'
-          : 'تمت إضافة المستخدم إلى $relationLabel بنجاح',
-      toastLength: Toast.LENGTH_LONG,
-      gravity: ToastGravity.BOTTOM,
-    );
-  }
-
   Future<void> followUser({
     String userId = '',
     int relationType = 1,
@@ -1024,18 +986,10 @@ class SearchProvider extends ChangeNotifier {
       }
 
       if (response.statusCode == 200) {
-        final String targetUserId = userId.trim();
-        final String relationLabel = _relationLabel(relationType);
-        final String displayName = _contactDisplayName(targetUserId);
-
         await getMyContactUser(contactNumbers);
         _contactsLastLoadedAt = DateTime.now();
         await refreshFriendsFamilyAll(pageSize: 30);
-
-        _showFollowSuccessToast(
-          displayName: displayName,
-          relationLabel: relationLabel,
-        );
+        Fluttertoast.showToast(msg: 'following');
       } else {
         final msg = (parsed is Map && parsed['message'] != null)
             ? parsed['message'].toString()
@@ -1050,7 +1004,6 @@ class SearchProvider extends ChangeNotifier {
   }
 }
 
-// ✅ Public model للـ sub-category — accessible من base_section_grid_sliver وغيره
 class SectionSubCatItem {
   const SectionSubCatItem({required this.id, required this.name});
   final String id;

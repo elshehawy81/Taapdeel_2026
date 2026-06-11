@@ -4,11 +4,15 @@ import 'package:taapdeel/config/ps_config.dart';
 import 'package:taapdeel/db/common/ps_shared_preferences.dart';
 import 'package:taapdeel/utils/utils.dart';
 import 'package:taapdeel/ui/category/list/category_list_view.dart';
+import 'package:taapdeel/ui/Contacts/contact_network_bottom_sheet.dart';
+import 'package:taapdeel/ui/Contacts/contact_network_provider.dart';
 import 'package:provider/provider.dart';
 
+import '../../Product/product_widget.dart';
 import '../widgets/swap_rating.dart';
-import '../widgets/swap_whatsapp_share_service.dart';
+import '../widgets/swap_consult_share_sheet.dart';
 
+import '../../../../../api/ps_url.dart';
 import '../../../../../constant/ps_constants.dart';
 import '../../../../../constant/route_paths.dart';
 import '../../../../../viewobject/holder/intent_holder/product_detail_intent_holder.dart';
@@ -162,25 +166,15 @@ IconData _iconForSuggestedSwapTab(_SuggestedSwapInterestTab tab) {
   }
 }
 
-String _subtitleForSuggestedSwapTab(_SuggestedSwapInterestTab tab) {
-  switch (tab) {
-    case _SuggestedSwapInterestTab.self:
-      return 'حسب اهتماماتك';
-    case _SuggestedSwapInterestTab.family:
-      return 'الأكثر ثقة';
-    case _SuggestedSwapInterestTab.other:
-      return 'فرص جديدة';
-  }
-}
 
 String _compactTitleForSuggestedSwapTab(_SuggestedSwapTabMeta meta) {
   switch (meta.tab) {
     case _SuggestedSwapInterestTab.self:
-      return 'ترشيحات \n مناسبة لاهتماماتك';
+      return 'ترشيحات مناسبة لاهتماماتك';
     case _SuggestedSwapInterestTab.family:
-      return 'ترشيحات\n مناسبة لعائلتك';
+      return 'ترشيحات مناسبة لعائلتك';
     case _SuggestedSwapInterestTab.other:
-      return 'ترشيحات\n لتصنيفات اخري';
+      return 'ترشيحات \nمن اقارب واصدقاء';
   }
 }
 
@@ -213,6 +207,7 @@ class SuggestedSwapsSectionState extends State<SuggestedSwapsSection> {
 
   int _currentIndex = 0;
   bool _didInitSync = false;
+  bool _didAutoSelectLastMyProduct = false;
   _SuggestedSwapInterestTab? _selectedTab;
 
   @override
@@ -463,6 +458,52 @@ class SuggestedSwapsSectionState extends State<SuggestedSwapsSection> {
     return buildInlineSwapVM(percent: percent, breakdown: breakdown);
   }
 
+  int? _parsePositiveIntValue(String? value) {
+    final String v = (value ?? '').trim();
+    final int? parsed = int.tryParse(v);
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
+  }
+
+  num _resolveProductValue(Product p) {
+    final int? low = _parsePositiveIntValue(p.lowPrice);
+    final int? high = _parsePositiveIntValue(p.highPrice);
+    final int? price = _parsePositiveIntValue(p.price);
+
+    if (low != null && high != null) return (low + high) / 2;
+    if (price != null) return price;
+    if (high != null) return high;
+    if (low != null) return low;
+
+    return 0;
+  }
+
+  num _totalProductsValue(List<Product> products) {
+    num total = 0;
+    for (final Product product in products) {
+      total += _resolveProductValue(product);
+    }
+    return total;
+  }
+
+  String _formatMoneyValue(num value) {
+    if (value >= 1000000) {
+      final num v = value / 1000000;
+      final String text =
+      v % 1 == 0 ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
+      return '$text مليون جنيه';
+    }
+
+    if (value >= 1000) {
+      final num v = value / 1000;
+      final String text =
+      v % 1 == 0 ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
+      return '$text ألف جنيه';
+    }
+
+    return '${value.toStringAsFixed(0)} جنيه';
+  }
+
   String _resolveSuggestedProductName(Product? p) {
     if (p == null) return '';
 
@@ -511,12 +552,38 @@ class SuggestedSwapsSectionState extends State<SuggestedSwapsSection> {
     if (!mounted) return;
 
     if (changed == true) {
+      final HomeProvider home = context.read<HomeProvider>();
+
       setState(() {
         _selectedTab = _SuggestedSwapInterestTab.self;
         _currentIndex = 0;
         _didInitSync = false;
       });
+
+      if (home.myItemId.trim().isNotEmpty) {
+        await home.topRecProduct(PsUrl.ps_top_recom_url);
+      }
     }
+  }
+
+  Future<void> _openRecommendationNetworkSheet() async {
+    if (!mounted) return;
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    await ContactNetworkBottomSheet.show(context);
+
+    if (!mounted) return;
+
+    final HomeProvider home = context.read<HomeProvider>();
+    if (home.myItemId.trim().isEmpty) return;
+
+    setState(() {
+      _currentIndex = 0;
+      _didInitSync = false;
+      _selectedTab = null;
+    });
+
+    await home.topRecProduct(PsUrl.ps_top_recom_url);
   }
 
   void _openProductDetails(BuildContext context, Product p) {
@@ -535,6 +602,147 @@ class SuggestedSwapsSectionState extends State<SuggestedSwapsSection> {
     );
   }
 
+
+  Future<void> _autoSelectLastMyProductIfNeeded(HomeProvider home) async {
+    if (_didAutoSelectLastMyProduct) return;
+    if (home.myProducts.isEmpty) return;
+
+    // ✅ مهم: لو المستخدم اختار منتج بالفعل من الـ Bottom Sheet
+    // لا نرجع نغيّره تلقائيًا لآخر منتج.
+    final String currentProductId =
+    (home.myProduct?.id ?? '').toString().trim();
+    if (currentProductId.isNotEmpty) {
+      _didAutoSelectLastMyProduct = true;
+      return;
+    }
+
+    // آخر منتج في قائمة منتجات المستخدم هو الذي سيتم اختياره تلقائيًا.
+    final Product lastProduct = home.myProducts.last;
+    final String lastProductId = (lastProduct.id ?? '').toString().trim();
+    if (lastProductId.isEmpty) return;
+
+    _didAutoSelectLastMyProduct = true;
+
+    setState(() {
+      _currentIndex = 0;
+      _didInitSync = false;
+      _selectedTab = null;
+    });
+
+    await home.setSelectedMyProduct(
+      lastProduct,
+      fetchRecommendations: true,
+    );
+  }
+
+
+  Future<void> _openMyProductsBottomSheet(HomeProvider home) async {
+    if (!mounted) return;
+
+    final List<Product> products = home.myProducts;
+    if (products.isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF073B5A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            content: const Directionality(
+              textDirection: TextDirection.rtl,
+              child: Text(
+                'لا يوجد منتجات أخرى للاختيار منها.',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        );
+      return;
+    }
+
+    final Product? selected = await showModalBottomSheet<Product>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext sheetContext) {
+        return _MyProductChangeBottomSheet(
+          products: products,
+          selectedProductId: home.myProduct?.id,
+          totalValueText: _formatMoneyValue(_totalProductsValue(products)),
+        );
+      },
+    );
+
+    if (!mounted || selected == null) return;
+
+    final String selectedId = (selected.id ?? '').toString().trim();
+    final String currentId = (home.myProduct?.id ?? '').toString().trim();
+
+    if (selectedId.isEmpty || selectedId == currentId) return;
+
+    setState(() {
+      _currentIndex = 0;
+      _didInitSync = false;
+      _selectedTab = null;
+      _didAutoSelectLastMyProduct = true;
+    });
+
+    await home.setSelectedMyProduct(
+      selected,
+      fetchRecommendations: true,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _currentIndex = 0;
+      _didInitSync = false;
+      _selectedTab = null;
+      _didAutoSelectLastMyProduct = true;
+    });
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          backgroundColor: const Color(0xFF073B5A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: const Directionality(
+            textDirection: TextDirection.rtl,
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Color(0xFF67E8F9),
+                  size: 22,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'تم تغيير المنتج وجاري تحديث الترشيحات.',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<HomeProvider>(
@@ -542,6 +750,11 @@ class SuggestedSwapsSectionState extends State<SuggestedSwapsSection> {
         final List<Product> allProducts =
         _removeRequestedSuggestions(home.recProducts);
         final bool hasItems = allProducts.isNotEmpty;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _autoSelectLastMyProductIfNeeded(home);
+        });
 
         final String loginUserId =
             PsSharedPreferences.instance.shared.getString(
@@ -683,6 +896,7 @@ class SuggestedSwapsSectionState extends State<SuggestedSwapsSection> {
                         relationBackendCode: _getRelationCode(p),
                         index: safeIndex,
                         totalCount: visibleProducts.length,
+                        headerProductsCount: home.myProducts.length,
                         tabsBar: tabs.isNotEmpty
                             ? _SuggestedSwapTabsBar(
                           tabs: tabs,
@@ -702,13 +916,19 @@ class SuggestedSwapsSectionState extends State<SuggestedSwapsSection> {
                             _openProductDetails(context, my);
                           }
                         },
+                        headerTotalValueText: _formatMoneyValue(
+                          _totalProductsValue(home.myProducts),
+                        ),
+                        onEditInterests: _openEditInterests,
+                        onOpenNetworkSheet: _openRecommendationNetworkSheet,
+                        onChangeMyProduct: () => _openMyProductsBottomSheet(home),
                         onPrevSuggestion: () => _goPrev(home, visibleProducts),
                         onNextSuggestion: () => _goNext(home, visibleProducts),
                       );
                     },
                   ),
                   const SizedBox(height: 10),
-                  _SwapWhatsAppShareButton(
+                  SwapWhatsAppShareButton(
                     myProduct: home.myProduct,
                     suggestions: visibleProducts,
                   ),
@@ -718,6 +938,123 @@ class SuggestedSwapsSectionState extends State<SuggestedSwapsSection> {
           ],
         );
       },
+    );
+  }
+}
+
+
+class _CompactPickerHeader extends StatelessWidget {
+  const _CompactPickerHeader({
+    required this.title,
+    required this.count,
+    required this.totalValueText,
+  });
+
+  final String title;
+  final int count;
+  final String totalValueText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: const Color(0xFFD8EDF3),
+            width: 1,
+          ),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x120C587A),
+              blurRadius: 12,
+              offset: Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  ShaderMask(
+                    blendMode: BlendMode.srcIn,
+                    shaderCallback: (Rect bounds) {
+                      return const LinearGradient(
+                        begin: Alignment.centerRight,
+                        end: Alignment.centerLeft,
+                        colors: <Color>[
+                          Color(0xFF072D56),
+                          Color(0xFF0D5E7B),
+                          Color(0xFF24A9C4),
+                        ],
+                      ).createShader(bounds);
+                    },
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+
+                ],
+              ),
+            ),
+            if (count > 0) ...<Widget>[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: AlignmentDirectional.topStart,
+                    end: AlignmentDirectional.bottomEnd,
+                    colors: <Color>[
+                      Color(0xFFFFFFFF),
+                      Color(0xFFEAF8FC),
+                      Color(0xFFDDF4FA),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: const Color(0xFFBFE3EC),
+                    width: 1,
+                  ),
+                  boxShadow: const <BoxShadow>[
+                    BoxShadow(
+                      color: Color(0x120C587A),
+                      blurRadius: 7,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '$count  منتج - $totalValueText',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF0C587A),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -742,7 +1079,7 @@ class _SuggestedSwapTabsBar extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 96,
+      height: 75,
       child: Directionality(
         textDirection: TextDirection.rtl,
         child: ListView.separated(
@@ -801,7 +1138,7 @@ class _SuggestedSwapWorldCard extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          width: 132,
+          width: 140,
           decoration: BoxDecoration(
             borderRadius: radius,
             gradient: LinearGradient(
@@ -842,61 +1179,40 @@ class _SuggestedSwapWorldCard extends StatelessWidget {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: <Widget>[
-                    PositionedDirectional(
-                      top: 8,
-                      start: 8,
-                      child: _SuggestedSwapCountBadge(
-                        count: meta.items.length,
-                        accent: palette.accent,
-                      ),
-                    ),
-                    if (editAction != null)
-                      PositionedDirectional(
-                        top: 8,
-                        end: 8,
-                        child: _InterestChipEditIcon(
-                          selected: selected,
-                          accent: palette.accent,
-                          onTap: editAction,
-                        ),
-                      ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 9, 8, 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: <Widget>[
-
-                          const SizedBox(height: 22),
-                          Expanded(
-                            child: Center(
-                              child: Text(
-                                title,
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  height: 1.45,
-                                  fontSize: 11.5,
-                                  color: Colors.white,
-                                ),
+                      padding: const EdgeInsets.fromLTRB(7, 6, 7, 6),                      child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              title,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                height: 1.50,
+                                fontSize: 12,
+                                color: Colors.white,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 7),
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 220),
-                            height: selected ? 4 : 3,
-                            width: selected ? 46 : 20,
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.55),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
+                        ),
+                        const SizedBox(height: 7),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          height: selected ? 4 : 3,
+                          width: selected ? 46 : 20,
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.55),
+                            borderRadius: BorderRadius.circular(999),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
                     ),
                   ],
                 ),
@@ -909,92 +1225,180 @@ class _SuggestedSwapWorldCard extends StatelessWidget {
   }
 }
 
-class _SuggestedSwapCountBadge extends StatelessWidget {
-  const _SuggestedSwapCountBadge({
-    required this.count,
-    required this.accent,
+
+class _RecommendationBoosterBar extends StatelessWidget {
+  const _RecommendationBoosterBar({
+    required this.onEditInterests,
+    required this.onOpenFriendsAndFamily,
+    required this.onOpenFamily,
   });
 
-  final int count;
-  final Color accent;
+  final VoidCallback onEditInterests;
+  final VoidCallback onOpenFriendsAndFamily;
+  final VoidCallback onOpenFamily;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minWidth: 25),
-      height: 25,
-      padding: const EdgeInsets.symmetric(horizontal: 7),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: accent.withValues(alpha: 0.18),
-          width: 1,
+    final int pendingFriendsCount =
+        context.watch<ContactNetworkProvider>().pendingCount;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        height: 46,
+        padding: const EdgeInsetsDirectional.only(
+          start: 8,
+          end: 7,
+          top: 6,
+          bottom: 6,
         ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: AlignmentDirectional.topStart,
+            end: AlignmentDirectional.bottomEnd,
+            colors: <Color>[
+              Color(0xFFFFFFFF),
+              Color(0xFFF4FCFE),
+              Color(0xFFEAF8FC),
+            ],
           ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        '$count',
-        maxLines: 1,
-        softWrap: false,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: accent,
-          fontWeight: FontWeight.w900,
-          height: 1.0,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: const Color(0xFFD8EFF5),
+            width: 1,
+          ),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x0D0C587A),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: <Widget>[
+
+            Text(
+              'حسّن الترشيحات',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: const Color(0xFF123B52),
+                fontWeight: FontWeight.w900,
+                fontSize: 11.4,
+                height: 1,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SizedBox(
+                height: 32,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  itemCount: 3,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (BuildContext context, int index) {
+                    switch (index) {
+                      case 0:
+                        return _RecommendationBoosterChip(
+                          label: 'أضف أصدقاءك',
+                          icon: Icons.groups_2_rounded,
+                          badgeCount: pendingFriendsCount,
+                          onTap: onOpenFriendsAndFamily,
+                        );
+                      case 1:
+                        return _RecommendationBoosterChip(
+                          label: 'عدل اهتماماتك',
+                          icon: Icons.tune_rounded,
+                          onTap: onEditInterests,
+                        );
+                      default:
+                        return _RecommendationBoosterChip(
+                          label: 'أضف عائلتك',
+                          icon: Icons.family_restroom_rounded,
+                          onTap: onOpenFamily,
+                        );
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _InterestChipEditIcon extends StatelessWidget {
-  const _InterestChipEditIcon({
-    required this.selected,
-    required this.accent,
+class _RecommendationBoosterChip extends StatelessWidget {
+  const _RecommendationBoosterChip({
+    required this.label,
+    required this.icon,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
-  final bool selected;
-  final Color accent;
+  final String label;
+  final IconData icon;
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'تعديل الاهتمامات',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
         onTap: onTap,
-        child: Container(
-          width: 29,
-          height: 29,
+        child: Ink(
+          height: 32,
+          padding: const EdgeInsetsDirectional.only(
+            start: 9,
+            end: 10,
+          ),
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: selected ? 0.98 : 0.90),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: accent.withValues(alpha: selected ? 0.22 : 0.16),
+              color: const Color(0xFFBFEAF0),
               width: 1,
             ),
-            boxShadow: <BoxShadow>[
+            boxShadow: const <BoxShadow>[
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+                color: Color(0x0A0C587A),
+                blurRadius: 7,
+                offset: Offset(0, 2),
               ),
             ],
           ),
-          alignment: Alignment.center,
-          child: Icon(
-            Icons.edit_rounded,
-            size: 15.5,
-            color: accent,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                icon,
+                size: 13,
+                color: const Color(0xFF0C587A),
+              ),
+              if (badgeCount > 0) ...<Widget>[
+                const SizedBox(width: 4),
+                _RecommendationBoosterCountBadge(count: badgeCount),
+              ],
+              const SizedBox(width: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: const Color(0xFF17425E),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10.6,
+                  height: 1,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1002,51 +1406,47 @@ class _InterestChipEditIcon extends StatelessWidget {
   }
 }
 
-class _SectionFancyHeader extends StatelessWidget {
-  const _SectionFancyHeader();
+
+class _RecommendationBoosterCountBadge extends StatelessWidget {
+  const _RecommendationBoosterCountBadge({
+    required this.count,
+  });
+
+  final int count;
 
   @override
   Widget build(BuildContext context) {
+    final String text = count > 99 ? '99+' : '$count';
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      constraints: const BoxConstraints(minWidth: 18),
+      height: 18,
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[
-            Color(0xFF072D56),
-            Color(0xFF0D5E7B),
-            Color(0xFF63CAD6),
-          ],
+        color: const Color(0xFFFFB020),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: Colors.white,
+          width: 1.5,
         ),
         boxShadow: const <BoxShadow>[
           BoxShadow(
-            color: Color(0x220E8FAE),
-            blurRadius: 16,
-            offset: Offset(0, 7),
+            color: Color(0x22000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
           ),
         ],
       ),
-      child: const Row(
-        children: [
-          SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'أفضل ترشيحات التبديل',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: Text(
+        text,
+        maxLines: 1,
+        style: const TextStyle(
+          color: Color(0xFF231307),
+          fontWeight: FontWeight.w900,
+          fontSize: 9.5,
+          height: 1,
+        ),
       ),
     );
   }
@@ -1063,10 +1463,15 @@ class _SuggestionCompareCard extends StatelessWidget {
     required this.relationBackendCode,
     required this.index,
     required this.totalCount,
+    required this.headerProductsCount,
     this.tabsBar,
     required this.onTapCard,
     required this.onTapSuggestedProduct,
     required this.onTapMyProduct,
+    required this.headerTotalValueText,
+    required this.onEditInterests,
+    required this.onOpenNetworkSheet,
+    required this.onChangeMyProduct,
     required this.onPrevSuggestion,
     required this.onNextSuggestion,
   });
@@ -1080,10 +1485,15 @@ class _SuggestionCompareCard extends StatelessWidget {
   final String? relationBackendCode;
   final int index;
   final int totalCount;
+  final int headerProductsCount;
   final Widget? tabsBar;
   final VoidCallback onTapCard;
   final VoidCallback onTapSuggestedProduct;
   final VoidCallback onTapMyProduct;
+  final String headerTotalValueText;
+  final VoidCallback onEditInterests;
+  final VoidCallback onOpenNetworkSheet;
+  final VoidCallback onChangeMyProduct;
   final VoidCallback onPrevSuggestion;
   final VoidCallback onNextSuggestion;
 
@@ -1157,12 +1567,13 @@ class _SuggestionCompareCard extends StatelessWidget {
               children: [
                 if (tabsBar != null) ...[
                   tabsBar!,
-                  const SizedBox(height: 12),
-                ],
-                _CompareCardTopBar(
-                  vm: vm,
-                  currentIndex: index,
-                  totalCount: totalCount,
+                  const SizedBox(height: 8),
+                ] else
+                  const SizedBox(height: 8),
+                _RecommendationBoosterBar(
+                  onEditInterests: onEditInterests,
+                  onOpenFriendsAndFamily: onOpenNetworkSheet,
+                  onOpenFamily: onOpenNetworkSheet,
                 ),
                 const SizedBox(height: 10),
                 _SwapCompareRow(
@@ -1170,17 +1581,20 @@ class _SuggestionCompareCard extends StatelessWidget {
                   suggestedProduct: product,
                   compact: compact,
                   smallLayout: smallLayout,
+                  relationBackendCode: relationBackendCode,
                   onTapMyProduct: onTapMyProduct,
+                  onChangeMyProduct: onChangeMyProduct,
                   onTapSuggestedProduct: onTapSuggestedProduct,
                   currentIndex: index,
                   totalCount: totalCount,
                   onPrevSuggestion: onPrevSuggestion,
                   onNextSuggestion: onNextSuggestion,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
                 SuggestedSwapReasonsGrid(
                   items: criteriaToShow,
                   compact: compact,
+                  vm: vm,
                 ),
               ],
             ),
@@ -1190,6 +1604,7 @@ class _SuggestionCompareCard extends StatelessWidget {
     );
   }
 }
+
 
 class _CompareCardTopBar extends StatelessWidget {
   const _CompareCardTopBar({
@@ -1294,7 +1709,9 @@ class _SwapCompareRow extends StatelessWidget {
     required this.suggestedProduct,
     required this.compact,
     required this.smallLayout,
+    this.relationBackendCode,
     required this.onTapMyProduct,
+    required this.onChangeMyProduct,
     required this.onTapSuggestedProduct,
     required this.currentIndex,
     required this.totalCount,
@@ -1306,7 +1723,9 @@ class _SwapCompareRow extends StatelessWidget {
   final Product suggestedProduct;
   final bool compact;
   final bool smallLayout;
+  final String? relationBackendCode;
   final VoidCallback onTapMyProduct;
+  final VoidCallback onChangeMyProduct;
   final VoidCallback onTapSuggestedProduct;
   final int currentIndex;
   final int totalCount;
@@ -1326,12 +1745,21 @@ class _SwapCompareRow extends StatelessWidget {
         Expanded(
           child: Align(
             alignment: Alignment.topCenter,
-            child: _CompareMiniProductCard(
-              product: myProduct,
-              isMine: true,
-              width: cardWidth,
-              height: cardHeight,
-              onTap: onTapMyProduct,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _CompareMiniProductCard(
+                  product: myProduct,
+                  isMine: true,
+                  width: cardWidth,
+                  height: cardHeight,
+                  onTap: onTapMyProduct,
+                ),
+                const SizedBox(height: 8),
+                _ChangeMyProductButton(
+                  onTap: onChangeMyProduct,
+                ),
+              ],
             ),
           ),
         ),
@@ -1374,6 +1802,7 @@ class _SwapCompareRow extends StatelessWidget {
                     isMine: false,
                     width: cardWidth,
                     height: cardHeight,
+                    relationBackendCode: relationBackendCode,
                     onTap: onTapSuggestedProduct,
                   ),
                 ),
@@ -1394,6 +1823,70 @@ class _SwapCompareRow extends StatelessWidget {
     );
   }
 }
+
+
+class _ChangeMyProductButton extends StatelessWidget {
+  const _ChangeMyProductButton({
+    required this.onTap,
+  });
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Ink(
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: const LinearGradient(
+              begin: AlignmentDirectional.centerStart,
+              end: AlignmentDirectional.centerEnd,
+              colors: <Color>[
+                Color(0xFF043757),
+                Color(0xFF0C587A),
+                Color(0xFF24A9C4),
+              ],
+            ),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x2219D4E2),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Directionality(
+            textDirection: TextDirection.rtl,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  'اختر منتج آخر',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11.5,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 class _SuggestedProductOnlyNavigator extends StatelessWidget {
   const _SuggestedProductOnlyNavigator({
@@ -1431,8 +1924,9 @@ class _SuggestedProductOnlyNavigator extends StatelessWidget {
           children: [
             _SmallSuggestedArrow(
               icon: Icons.chevron_left_rounded,
-              enabled: canPrev,
-              onTap: onPrev,
+              enabled: canNext,
+              onTap: onNext,
+              highlight: canNext,
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1447,9 +1941,10 @@ class _SuggestedProductOnlyNavigator extends StatelessWidget {
             ),
             _SmallSuggestedArrow(
               icon: Icons.chevron_right_rounded,
-              enabled: canNext,
-              onTap: onNext,
+              enabled: canPrev,
+              onTap: onPrev,
             ),
+
           ],
         ),
       ),
@@ -1457,47 +1952,156 @@ class _SuggestedProductOnlyNavigator extends StatelessWidget {
   }
 }
 
-class _SmallSuggestedArrow extends StatelessWidget {
+class _SmallSuggestedArrow extends StatefulWidget {
   const _SmallSuggestedArrow({
     required this.icon,
     required this.enabled,
     required this.onTap,
+    this.highlight = false,
   });
 
   final IconData icon;
   final bool enabled;
   final VoidCallback onTap;
 
+  /// استخدمها مع زرار next فقط عشان تلفت نظر المستخدم
+  final bool highlight;
+
+  @override
+  State<_SmallSuggestedArrow> createState() => _SmallSuggestedArrowState();
+}
+
+class _SmallSuggestedArrowState extends State<_SmallSuggestedArrow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnim;
+  late final Animation<double> _slideAnim;
+  late final Animation<double> _glowAnim;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    );
+
+    _scaleAnim = Tween<double>(begin: 1.0, end: 1.12).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _slideAnim = Tween<double>(begin: 0, end: -3).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _glowAnim = Tween<double>(begin: 0.18, end: 0.48).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _syncAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SmallSuggestedArrow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.enabled != widget.enabled ||
+        oldWidget.highlight != widget.highlight) {
+      _syncAnimation();
+    }
+  }
+
+  void _syncAnimation() {
+    if (widget.enabled && widget.highlight) {
+      _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+      _controller.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _shouldAnimate => widget.enabled && widget.highlight;
+
   @override
   Widget build(BuildContext context) {
     return Opacity(
-      opacity: enabled ? 1 : 0.35,
+      opacity: widget.enabled ? 1 : 0.35,
       child: IgnorePointer(
-        ignoring: !enabled,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(999),
-          onTap: onTap,
-          child: Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: enabled
-                  ? const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: <Color>[
-                  Color(0xFF24A9C4),
-                  Color(0xFF0C587A),
-                ],
-              )
-                  : null,
-              color: enabled ? null : const Color(0xFFD8E1E8),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 20,
+        ignoring: !widget.enabled,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final double scale = _shouldAnimate ? _scaleAnim.value : 1.0;
+            final double slide = _shouldAnimate ? _slideAnim.value : 0.0;
+            final double glow = _shouldAnimate ? _glowAnim.value : 0.18;
+
+            return Transform.translate(
+              offset: Offset(slide, 0),
+              child: Transform.scale(
+                scale: scale,
+                child: child,
+              ),
+            );
+          },
+          child: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: widget.onTap,
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) {
+                final double glow = _shouldAnimate ? _glowAnim.value : 0.18;
+
+                return Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: widget.enabled
+                        ? const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: <Color>[
+                        Color(0xFF24A9C4),
+                        Color(0xFF0C587A),
+                      ],
+                    )
+                        : null,
+                    color: widget.enabled ? null : const Color(0xFFD8E1E8),
+                    boxShadow: widget.enabled
+                        ? <BoxShadow>[
+                      BoxShadow(
+                        color: const Color(0xFF24A9C4)
+                            .withValues(alpha: glow),
+                        blurRadius: _shouldAnimate ? 12 : 6,
+                        spreadRadius: _shouldAnimate ? 1.2 : 0,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                        : const <BoxShadow>[],
+                  ),
+                  child: Icon(
+                    widget.icon,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                );
+              },
             ),
           ),
         ),
@@ -1513,6 +2117,7 @@ class _CompareMiniProductCard extends StatelessWidget {
     required this.isMine,
     required this.width,
     required this.height,
+    this.relationBackendCode,
     required this.onTap,
   }) : super(key: key);
 
@@ -1520,6 +2125,7 @@ class _CompareMiniProductCard extends StatelessWidget {
   final bool isMine;
   final double width;
   final double height;
+  final String? relationBackendCode;
   final VoidCallback onTap;
 
   ImageProvider _imageProviderFor(Product? p) {
@@ -1579,6 +2185,22 @@ class _CompareMiniProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Product? p = product;
+
+    if (p != null) {
+      return TaapdeelProductCardItem(
+        product: p,
+        coreTagKey: 'suggested_swap_${isMine ? 'my' : 'rec'}_${p.id ?? p.hashCode}',
+        onTap: onTap,
+        cardWidth: width,
+        cardHeight: height,
+        outerMargin: EdgeInsets.zero,
+        variant: TaapdeelProductCardVariant.deal,
+        showRotatingBanner: true,
+        showRelationPanel: !isMine,
+        relationBackendCode: isMine ? null : relationBackendCode,
+      );
+    }
+
     final BorderRadius radius = BorderRadius.circular(22);
     final ImageProvider image = _imageProviderFor(p);
     final String priceLabel = _resolvePriceRange(p);
@@ -1706,6 +2328,309 @@ class _CompareMiniProductCard extends StatelessWidget {
   }
 }
 
+
+class _MyProductChangeBottomSheet extends StatelessWidget {
+  const _MyProductChangeBottomSheet({
+    required this.products,
+    required this.selectedProductId,
+    required this.totalValueText,
+  });
+
+  final List<Product> products;
+  final String? selectedProductId;
+  final String totalValueText;
+  bool _isPending(Product p) {
+    return (p.status ?? '1').toString().trim() == '0';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double screenH = MediaQuery.of(context).size.height;
+    final double screenW = MediaQuery.of(context).size.width;
+    final bool smallLayout = screenW < 390;
+    final bool compact = screenH < 760;
+    final double cardWidth = smallLayout ? 128 : 142;
+    final double cardHeight = compact ? 172 : 188;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        constraints: BoxConstraints(maxHeight: screenH * 0.66),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF6FBFD),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(30),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const SizedBox(height: 10),
+            Container(
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(
+                color: const Color(0xFFB8CBD5),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              child: _MyProductChangeSheetHeader(
+                count: products.length,
+                totalValueText: totalValueText,
+              ),
+            ),
+            SizedBox(
+              height: cardHeight + 34,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 2, 16, 14),
+                itemCount: products.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (BuildContext context, int index) {
+                  final Product product = products[index];
+                  final String id = (product.id ?? '').toString().trim();
+                  final bool selected =
+                      id.isNotEmpty && id == (selectedProductId ?? '').trim();
+                  final bool pending = _isPending(product);
+
+                  return _MyProductChangeMiniCard(
+                    product: product,
+                    width: cardWidth,
+                    height: cardHeight,
+                    selected: selected,
+                    pending: pending,
+                    onTap: () => Navigator.of(context).pop(product),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MyProductChangeSheetHeader extends StatelessWidget {
+  const _MyProductChangeSheetHeader({
+    required this.count, required this.totalValueText,
+  });
+
+  final int count;
+  final String totalValueText;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(13, 13, 13, 13),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: <Color>[
+            Color(0xFF011934),
+            Color(0xFF043757),
+            Color(0xFF24A9C4),
+          ],
+        ),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x220E8FAE),
+            blurRadius: 16,
+            offset: Offset(0, 7),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 43,
+            height: 43,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.22),
+              ),
+            ),
+            child: const Icon(
+              Icons.inventory_2_rounded,
+              color: Colors.white,
+              size: 23,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const Text(
+                  'اختار منتج لعرض ترشيحات التبديل',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '$count منتج متاح - $totalValueText',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.78),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MyProductChangeMiniCard extends StatelessWidget {
+  const _MyProductChangeMiniCard({
+    required this.product,
+    required this.width,
+    required this.height,
+    required this.selected,
+    required this.pending,
+    required this.onTap,
+  });
+
+  final Product product;
+  final double width;
+  final double height;
+  final bool selected;
+  final bool pending;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          _CompareMiniProductCard(
+            product: product,
+            isMine: true,
+            width: width,
+            height: height,
+            onTap: onTap,
+          ),
+          PositionedDirectional(
+            top: -5,
+            end: -5,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 27,
+              height: 27,
+              decoration: BoxDecoration(
+                color: pending
+                    ? const Color(0xFFF4B23E)
+                    : selected
+                    ? const Color(0xFF24A9C4)
+                    : Colors.white.withValues(alpha: 0.94),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2,
+                ),
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x22000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(
+                pending
+                    ? Icons.hourglass_top_rounded
+                    : selected
+                    ? Icons.check_rounded
+                    : Icons.radio_button_off_rounded,
+                color: pending || selected
+                    ? Colors.white
+                    : const Color(0xFF9CB3BF),
+                size: pending || selected ? 15 : 17,
+              ),
+            ),
+          ),
+          PositionedDirectional(
+            start: 8,
+            end: 8,
+            bottom: -2,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: 28,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                gradient: selected
+                    ? const LinearGradient(
+                  begin: AlignmentDirectional.centerStart,
+                  end: AlignmentDirectional.centerEnd,
+                  colors: <Color>[
+                    Color(0xFF043757),
+                    Color(0xFF0C587A),
+                    Color(0xFF24A9C4),
+                  ],
+                )
+                    : null,
+                color: selected ? null : Colors.white.withValues(alpha: 0.92),
+                border: Border.all(
+                  color: selected
+                      ? Colors.white.withValues(alpha: 0.80)
+                      : const Color(0xFFD8EDF3),
+                  width: 1,
+                ),
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x140C587A),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                pending
+                    ? 'بانتظار الموافقة'
+                    : selected
+                    ? 'المنتج الحالي'
+                    : 'اختيار المنتج',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected
+                      ? Colors.white
+                      : pending
+                      ? const Color(0xFFB26A00)
+                      : const Color(0xFF0C587A),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10.2,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 class _ProductOverlayPill extends StatelessWidget {
   const _ProductOverlayPill({
     required this.text,
@@ -1782,14 +2707,14 @@ class _SwapConnectorBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double size = smallLayout ? 52 : 60;
+    final double size = smallLayout ? 30 : 40;
 
     return SizedBox(
       width: size,
       height: size,
       child: Center(
         child: SizedBox(
-          width: 55,
+          width: 45,
           height: 48,
           child: Image.asset(
             'assets/images/Taapdeel_icon.png',
@@ -2077,909 +3002,5 @@ class _CircularScorePainter extends CustomPainter {
         oldDelegate.arcColor != arcColor ||
         oldDelegate.secondaryArcColor != secondaryArcColor ||
         oldDelegate.trackColor != trackColor;
-  }
-}
-
-// =============================================================
-// _SwapWhatsAppShareButton
-// زرار "استشير صحابك/قرايبك" — يفتح اختيار المنتجات والثيم قبل الشير
-// =============================================================
-class _SwapWhatsAppShareButton extends StatefulWidget {
-  const _SwapWhatsAppShareButton({
-    required this.myProduct,
-    required this.suggestions,
-  });
-
-  final Product? myProduct;
-  final List<Product> suggestions;
-
-  @override
-  State<_SwapWhatsAppShareButton> createState() =>
-      _SwapWhatsAppShareButtonState();
-}
-
-class _SwapWhatsAppShareButtonState extends State<_SwapWhatsAppShareButton> {
-  bool _loading = false;
-
-  Future<void> _onTap() async {
-    if (_loading) return;
-
-    final _SwapShareSelectionResult? result = await showSwapSharePickerSheet(
-      context: context,
-      myProduct: widget.myProduct,
-      suggestions: widget.suggestions,
-    );
-
-    if (result == null || result.products.isEmpty) return;
-
-    if (mounted) setState(() => _loading = true);
-
-    try {
-      await SwapWhatsAppShareService.share(
-        context: context,
-        myProduct: widget.myProduct,
-        suggestions: result.products,
-        theme: result.theme,
-      );
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: GestureDetector(
-        onTap: _onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          height: 50,
-          width: 240,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.centerRight,
-              end: Alignment.centerLeft,
-              colors: <Color>[
-                Color(0xFF25D366),
-                Color(0xFF128C7E),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: const <BoxShadow>[
-              BoxShadow(
-                color: Color(0x3025D366),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Center(
-            child: _loading
-                ? const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2.5,
-              ),
-            )
-                : const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text('💬', style: TextStyle(fontSize: 18)),
-                SizedBox(width: 8),
-                Text(
-                  'استشير صحابك/قرايبك',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-                SizedBox(width: 6),
-                Text(
-                  '↗',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SwapShareSelectionResult {
-  const _SwapShareSelectionResult({
-    required this.products,
-    required this.theme,
-  });
-
-  final List<Product> products;
-  final SwapShareTheme theme;
-}
-
-Future<_SwapShareSelectionResult?> showSwapSharePickerSheet({
-  required BuildContext context,
-  required Product? myProduct,
-  required List<Product> suggestions,
-}) {
-  return showModalBottomSheet<_SwapShareSelectionResult>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (BuildContext sheetContext) {
-      return _SwapSharePickerSheet(
-        myProduct: myProduct,
-        suggestions: suggestions,
-      );
-    },
-  );
-}
-
-class _SwapSharePickerSheet extends StatefulWidget {
-  const _SwapSharePickerSheet({
-    required this.myProduct,
-    required this.suggestions,
-  });
-
-  final Product? myProduct;
-  final List<Product> suggestions;
-
-  @override
-  State<_SwapSharePickerSheet> createState() => _SwapSharePickerSheetState();
-}
-
-class _SwapSharePickerSheetState extends State<_SwapSharePickerSheet> {
-  static const int _maxProducts = 5;
-
-  late final Set<int> _selectedIndexes;
-  int _selectedThemeIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    final int initialCount = widget.suggestions.length < 3
-        ? widget.suggestions.length
-        : 3;
-    _selectedIndexes = Set<int>.from(
-      List<int>.generate(initialCount, (int index) => index),
-    );
-  }
-
-  void _toggleProduct(int index) {
-    setState(() {
-      if (_selectedIndexes.contains(index)) {
-        _selectedIndexes.remove(index);
-        return;
-      }
-
-      if (_selectedIndexes.length >= _maxProducts) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: const Color(0xFF073B5A),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              content: const Directionality(
-                textDirection: TextDirection.rtl,
-                child: Text(
-                  'يمكنك اختيار 5 منتجات كحد أقصى حتى تظل صورة الشير واضحة.',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-          );
-        return;
-      }
-
-      _selectedIndexes.add(index);
-    });
-  }
-
-  void _share() {
-    if (_selectedIndexes.isEmpty) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: const Color(0xFF073B5A),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            content: const Directionality(
-              textDirection: TextDirection.rtl,
-              child: Text(
-                'اختار منتج واحد على الأقل عشان تسأل عليه.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-        );
-      return;
-    }
-
-    final List<int> orderedIndexes = _selectedIndexes.toList()..sort();
-    final List<Product> selectedProducts = orderedIndexes
-        .where((int index) => index >= 0 && index < widget.suggestions.length)
-        .map((int index) => widget.suggestions[index])
-        .toList(growable: false);
-
-    Navigator.of(context).pop(
-      _SwapShareSelectionResult(
-        products: selectedProducts,
-        theme: SwapShareTheme.presets[_selectedThemeIndex],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final double screenH = MediaQuery.of(context).size.height;
-    final double sheetMaxH = screenH * 0.88;
-
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Container(
-        constraints: BoxConstraints(maxHeight: sheetMaxH),
-        decoration: const BoxDecoration(
-          color: Color(0xFFF6FBFD),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const SizedBox(height: 10),
-            Container(
-              width: 44,
-              height: 5,
-              decoration: BoxDecoration(
-                color: const Color(0xFFB8CBD5),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-              child: _SharePickerHeader(
-                selectedCount: _selectedIndexes.length,
-                maxProducts: _maxProducts,
-              ),
-            ),
-            Flexible(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    const _SharePickerSectionTitle(
-                      icon: Icons.inventory_2_rounded,
-                      title: 'اختار المنتجات اللي تحب تسأل عنها',
-                      subtitle: 'تم اختيار أول 3 تلقائيًا، ويمكنك التعديل قبل الشير.',
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      height: 104,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsetsDirectional.only(end: 2),
-                        itemCount: widget.suggestions.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
-                        itemBuilder: (BuildContext context, int index) {
-                          final Product product = widget.suggestions[index];
-
-                          return SizedBox(
-                            width: MediaQuery.of(context).size.width * 0.78,
-                            child: _ShareProductSelectCard(
-                              product: product,
-                              index: index,
-                              selected: _selectedIndexes.contains(index),
-                              onTap: () => _toggleProduct(index),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    const _SharePickerSectionTitle(
-                      icon: Icons.palette_rounded,
-                      title: 'اختار ثيم الاستشارة',
-                      subtitle: 'الثيم يغير شكل الصورة ونص السؤال في واتساب.',
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      height: 106,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: SwapShareTheme.presets.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
-                        itemBuilder: (BuildContext context, int index) {
-                          final SwapShareTheme theme =
-                          SwapShareTheme.presets[index];
-                          return _ShareThemeCard(
-                            theme: theme,
-                            selected: index == _selectedThemeIndex,
-                            onTap: () => setState(() {
-                              _selectedThemeIndex = index;
-                            }),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            _SharePickerBottomBar(
-              selectedCount: _selectedIndexes.length,
-              theme: SwapShareTheme.presets[_selectedThemeIndex],
-              onCancel: () => Navigator.of(context).pop(),
-              onShare: _share,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SharePickerHeader extends StatelessWidget {
-  const _SharePickerHeader({
-    required this.selectedCount,
-    required this.maxProducts,
-  });
-
-  final int selectedCount;
-  final int maxProducts;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: <Color>[
-            Color(0xFF011934),
-            Color(0xFF043757),
-            Color(0xFF24A9C4),
-          ],
-        ),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x220E8FAE),
-            blurRadius: 16,
-            offset: Offset(0, 7),
-          ),
-        ],
-      ),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.22),
-              ),
-            ),
-            child: const Icon(
-              Icons.ios_share_rounded,
-              color: Colors.white,
-              size: 23,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'اسأل الناس قبل ما تبدّل',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'مختار $selectedCount من $maxProducts منتجات كحد أقصى',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.78),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SharePickerSectionTitle extends StatelessWidget {
-  const _SharePickerSectionTitle({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Container(
-          width: 31,
-          height: 31,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE6F7FA),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            icon,
-            color: const Color(0xFF0A7EA0),
-            size: 17,
-          ),
-        ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Color(0xFF123B52),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 13.5,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  color: Color(0xFF6C8391),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11.6,
-                  height: 1.25,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ShareProductSelectCard extends StatelessWidget {
-  const _ShareProductSelectCard({
-    required this.product,
-    required this.index,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final Product product;
-  final int index;
-  final bool selected;
-  final VoidCallback onTap;
-
-  ImageProvider _imageProviderFor(Product p) {
-    final String? raw = p.defaultPhoto?.imgPath;
-    if (raw == null || raw.trim().isEmpty) {
-      return const AssetImage('assets/images/img_placeholder.png');
-    }
-
-    final String path = raw.trim();
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return NetworkImage(path);
-    }
-
-    return NetworkImage('${PsConfig.ps_app_image_url}$path');
-  }
-
-  int _scoreOf(Product p) {
-    return int.tryParse((p.swapScorePercent ?? '').toString().trim()) ?? 0;
-  }
-
-  String _priceOf(Product p) {
-    final String low = (p.lowPrice ?? '').trim();
-    final String high = (p.highPrice ?? '').trim();
-    final String price = (p.price ?? '').trim();
-
-    if (low.isNotEmpty && high.isNotEmpty && low != '0' && high != '0') {
-      if (low == high) return '$low جنيه';
-      return '$low - $high جنيه';
-    }
-
-    if (price.isNotEmpty && price != '0') return '$price جنيه';
-    if (low.isNotEmpty && low != '0') return '$low جنيه';
-    if (high.isNotEmpty && high != '0') return '$high جنيه';
-    return 'السعر غير محدد';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final int score = _scoreOf(product);
-    final String label = product.title ?? 'منتج';
-    final String price = _priceOf(product);
-    final String condition = (product.conditionOfItem?.name ?? '').trim();
-    final int safeLetterIndex = index < 0 ? 0 : (index > 4 ? 4 : index);
-    final String letter = <String>['أ', 'ب', 'ج', 'د', 'هـ'][safeLetterIndex];
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.all(9),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected ? const Color(0xFF24A9C4) : const Color(0xFFDCE8EE),
-              width: selected ? 1.8 : 1,
-            ),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: selected
-                    ? const Color(0x3324A9C4)
-                    : Colors.black.withValues(alpha: 0.035),
-                blurRadius: selected ? 14 : 8,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Row(
-            children: <Widget>[
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: selected
-                      ? const Color(0xFF24A9C4)
-                      : const Color(0xFFEAF4F7),
-                ),
-                alignment: Alignment.center,
-                child: selected
-                    ? const Icon(
-                  Icons.check_rounded,
-                  color: Colors.white,
-                  size: 19,
-                )
-                    : Text(
-                  letter,
-                  style: const TextStyle(
-                    color: Color(0xFF526E7B),
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 9),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Image(
-                  image: _imageProviderFor(product),
-                  width: 58,
-                  height: 58,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) {
-                    return Container(
-                      width: 58,
-                      height: 58,
-                      color: const Color(0xFFE8F4F8),
-                      child: const Icon(
-                        Icons.image_outlined,
-                        color: Color(0xFF8AA6B8),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF123B52),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 5,
-                      children: <Widget>[
-                        _ShareMiniChip(
-                          text: price,
-                          icon: Icons.payments_rounded,
-                        ),
-                        if (condition.isNotEmpty)
-                          _ShareMiniChip(
-                            text: condition,
-                            icon: Icons.verified_rounded,
-                          ),
-                        if (score > 0)
-                          _ShareMiniChip(
-                            text: '$score%',
-                            icon: Icons.auto_awesome_rounded,
-                            highlighted: true,
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ShareMiniChip extends StatelessWidget {
-  const _ShareMiniChip({
-    required this.text,
-    required this.icon,
-    this.highlighted = false,
-  });
-
-  final String text;
-  final IconData icon;
-  final bool highlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(
-        color: highlighted ? const Color(0xFFFFF7E6) : const Color(0xFFF1F7FA),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: highlighted ? const Color(0xFFFFD47A) : const Color(0xFFD8E8EF),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(
-            icon,
-            size: 12,
-            color: highlighted ? const Color(0xFF9A6200) : const Color(0xFF587381),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              color: highlighted ? const Color(0xFF8A5700) : const Color(0xFF526E7B),
-              fontWeight: FontWeight.w800,
-              fontSize: 10.3,
-              height: 1.0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ShareThemeCard extends StatelessWidget {
-  const _ShareThemeCard({
-    required this.theme,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final SwapShareTheme theme;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedScale(
-      duration: const Duration(milliseconds: 180),
-      scale: selected ? 1.0 : 0.96,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: 148,
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: theme.gradient,
-            ),
-            border: Border.all(
-              color: selected ? Colors.white : Colors.white.withValues(alpha: 0.42),
-              width: selected ? 3 : 1,
-            ),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: theme.accentColor.withValues(alpha: selected ? 0.26 : 0.10),
-                blurRadius: selected ? 16 : 8,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      theme.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12.5,
-                      ),
-                    ),
-                  ),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.18),
-                      shape: BoxShape.circle,
-                    ),
-                    child: selected
-                        ? Icon(
-                      Icons.check_rounded,
-                      size: 16,
-                      color: theme.primaryColor,
-                    )
-                        : null,
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Text(
-                theme.question,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.86),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 10.5,
-                  height: 1.25,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SharePickerBottomBar extends StatelessWidget {
-  const _SharePickerBottomBar({
-    required this.selectedCount,
-    required this.theme,
-    required this.onCancel,
-    required this.onShare,
-  });
-
-  final int selectedCount;
-  final SwapShareTheme theme;
-  final VoidCallback onCancel;
-  final VoidCallback onShare;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: OutlinedButton(
-              onPressed: onCancel,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                side: const BorderSide(color: Color(0xFFD7E6EE)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text(
-                'إلغاء',
-                style: TextStyle(
-                  color: Color(0xFF526E7B),
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton.icon(
-              onPressed: selectedCount == 0 ? null : onShare,
-              icon: const Icon(Icons.ios_share_rounded, color: Colors.white),
-              label: Text(
-                'شير $selectedCount منتجات',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                backgroundColor: theme.accentColor,
-                disabledBackgroundColor: const Color(0xFFB8CBD5),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

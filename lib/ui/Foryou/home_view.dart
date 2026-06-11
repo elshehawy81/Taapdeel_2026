@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:taapdeel/config/ps_colors.dart';
-import 'package:taapdeel/ui/Foryou/widgets/my_products_picker_section.dart';
 import 'package:taapdeel/ui/Foryou/widgets/suggested_swaps_section.dart';
 import 'package:taapdeel/ui/common/taapdeel/taapdeel_scaffold.dart';
 
@@ -107,61 +106,6 @@ class _MyProductsHintCard extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SelectMyProductCard extends StatelessWidget {
-  const _SelectMyProductCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.80),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: const Color(0xFF79D6E7).withOpacity(0.28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.touch_app_rounded,
-            color: Color(0xFF1AB8C3),
-            size: 36,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'اختر منتجك أولاً',
-            style: t.titleSmall?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: const Color(0xFF111827),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'اضغط على أحد منتجاتك بالأعلى لعرض أفضل فرص التبديل',
-            textAlign: TextAlign.center,
-            style: t.bodySmall?.copyWith(
-              color: const Color(0xFF6B7280),
-              height: 1.5,
             ),
           ),
         ],
@@ -629,83 +573,111 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
 
   Widget? _buildBottomBar(BuildContext context, HomeProvider home) {
     final bool canSubmit = home.canSubmitSwap;
-    final bool isPending = home.isMyProductPending; // ✅
+    final bool isPending = home.isMyProductPending;
+
+    final String helperText = isPending
+        ? 'منتجك لسه في انتظار موافقة الأدمن'
+        : 'اختر منتجك ومنتج للتبديل أولاً';
+
+    if (!canSubmit) {
+      return SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
+          child: Container(
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.92),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: isPending
+                    ? const Color(0xFFF59E0B).withOpacity(0.28)
+                    : const Color(0xFFD7E6EE),
+              ),
+              boxShadow: const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x12000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isPending
+                      ? Icons.hourglass_top_rounded
+                      : Icons.info_outline_rounded,
+                  size: 13,
+                  color: isPending
+                      ? const Color(0xFFF59E0B)
+                      : PsColors.textSecondary,
+                ),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    helperText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: isPending
+                          ? const Color(0xFFF59E0B)
+                          : PsColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 10.8,
+                      height: 1,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IgnorePointer(
-              ignoring: !canSubmit || home.isSubmitting,
-              child: Opacity(
-                opacity: (!canSubmit || home.isSubmitting) ? 0.4 : 1.0,
-                child: TaapdeelButton(
-                  label: home.isSubmitting ? 'جاري الإرسال...' : 'اطلب التبديل',
-                  onPressed: () async {
-                    final HomeProvider homeProvider =
-                    HomeProvider.of(context, listen: false);
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
+        child: IgnorePointer(
+          ignoring: home.isSubmitting,
+          child: Opacity(
+            opacity: home.isSubmitting ? 0.55 : 1.0,
+            child: TaapdeelButton(
+              label: home.isSubmitting ? 'جاري الإرسال...' : 'اطلب التبديل',
+              onPressed: () async {
+                final HomeProvider homeProvider =
+                HomeProvider.of(context, listen: false);
 
-                    final Product? requestedProduct =
-                        homeProvider.selectedSwapProduct;
+                final Product? requestedProduct =
+                    homeProvider.selectedSwapProduct;
 
-                    try {
-                      await homeProvider.submitSwap(context: context);
-                    } catch (_) {
-                      return;
-                    }
+                try {
+                  await homeProvider.submitSwap(context: context);
+                } catch (_) {
+                  return;
+                }
 
-                    if (!context.mounted || requestedProduct == null) {
-                      return;
-                    }
+                if (!context.mounted || requestedProduct == null) {
+                  return;
+                }
 
-                    notifySuggestedSwapRequestSent(
-                      context: context,
-                      requestedProduct: requestedProduct,
-                    );
-                  },
-                  isPrimary: true,
-                  isExpanded: true,
-                  outlined: false,
-                  height: 48,
-                ),
-              ),
+                notifySuggestedSwapRequestSent(
+                  context: context,
+                  requestedProduct: requestedProduct,
+                );
+              },
+              isPrimary: true,
+              isExpanded: true,
+              outlined: false,
+              height: 40,
             ),
-            // ✅ رسالة مختلفة حسب السبب
-            if (!canSubmit)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isPending) ...[
-                      const Icon(
-                        Icons.hourglass_top_rounded,
-                        size: 13,
-                        color: Color(0xFFF59E0B),
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(
-                      isPending
-                          ? 'منتجك لسه في انتظار موافقة الأدمن'
-                          : 'اختر منتجك ومنتج للتبديل أولاً',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isPending
-                            ? const Color(0xFFF59E0B)
-                            : PsColors.textSecondary,
-                        fontWeight:
-                        isPending ? FontWeight.w700 : FontWeight.normal,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );
@@ -724,7 +696,6 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
 
   Widget _buildLoggedInContent(HomeProvider home) {
     final bool hasMyProducts = home.myProducts.isNotEmpty;
-    final bool hasSelectedMyProduct = home.myProduct != null;
 
     _handleAutoScrollAfterProductSelection(home);
 
@@ -756,8 +727,7 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                MyProductsPickerSection(homeProvider: home),
-                const SizedBox(height: 10),
+
                 KeyedSubtree(
                   key: _recommendationsAnchorKey,
                   child: const SizedBox.shrink(),
@@ -766,18 +736,7 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
                   duration: const Duration(milliseconds: 260),
                   switchInCurve: Curves.easeOut,
                   switchOutCurve: Curves.easeIn,
-                  child: !hasSelectedMyProduct
-                      ? Center(
-                    key: const ValueKey('select_product_first'),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 520),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: _SelectMyProductCard(),
-                      ),
-                    ),
-                  )
-                      : home.recLoading
+                  child: home.recLoading
                       ? const Padding(
                     key: ValueKey('recommendation_loading'),
                     padding: EdgeInsets.only(top: 24),
@@ -803,7 +762,7 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
     final home = HomeProvider.of(context);
 
     final bool showStickySwapButton = _isLoggedIn && home.myProducts.isNotEmpty;
-    final double bottomBodyPadding = showStickySwapButton ? 20.0 : 0.0;
+    final double bottomBodyPadding = showStickySwapButton ? 0.0 : 0.0;
 
     return TaapdeelScaffold(
       padding: const EdgeInsets.all(10),

@@ -40,6 +40,11 @@ class SwapWhatsAppShareService {
   static const Color _white = Colors.white;
   static const List<String> _letters = <String>['أ', 'ب', 'ج', 'د', 'هـ'];
 
+  static final Map<String, Future<ui.Image?>> _productImageFutureCache =
+  <String, Future<ui.Image?>>{};
+  static final Map<String, Future<ui.Image?>> _assetImageFutureCache =
+  <String, Future<ui.Image?>>{};
+
   static Future<void> share({
     required BuildContext context,
     required Product? myProduct,
@@ -62,21 +67,10 @@ class SwapWhatsAppShareService {
     final String referralCode = _readReferralCode(context);
 
     try {
-      final ui.Image? myImg = await _loadProductImage(myProduct);
-      final List<ui.Image?> sugImgs = await Future.wait(
-        shown.map(_loadProductImage),
-      );
-      final ui.Image? logoImg = await _loadAssetImage(
-        'assets/images/Taapdeel_icon.png',
-      );
-
-      final Uint8List pngBytes = await _buildShareImage(
+      final Uint8List pngBytes = await buildShareImageBytes(
         myProduct: myProduct,
-        myImg: myImg,
         suggestions: shown,
-        sugImgs: sugImgs,
         theme: selectedTheme,
-        logoImg: logoImg,
       );
 
       final Directory tmpDir = await getTemporaryDirectory();
@@ -93,6 +87,49 @@ class SwapWhatsAppShareService {
     }
   }
 
+
+  // Public shared renderer entry point.
+  // Used by swap_share_image_renderer.dart and by the share flow itself.
+  // This keeps the Bottom Sheet preview and the final WhatsApp image identical.
+  static Future<Uint8List> buildShareImageBytes({
+    required Product myProduct,
+    required List<Product> suggestions,
+    required SwapShareTheme theme,
+    double renderScale = 1,
+  }) async {
+    final double safeScale = renderScale.clamp(0.35, 1.0).toDouble();
+    final int imageTargetSize = safeScale < 0.75 ? 220 : 420;
+    final int logoTargetWidth = safeScale < 0.75 ? 180 : 360;
+    final List<Product> shown = suggestions.take(5).toList(growable: false);
+
+    final ui.Image? myImg = await _loadProductImage(
+      myProduct,
+      targetSize: imageTargetSize,
+    );
+    final List<ui.Image?> sugImgs = await Future.wait(
+      shown.map(
+            (Product product) => _loadProductImage(
+          product,
+          targetSize: imageTargetSize,
+        ),
+      ),
+    );
+    final ui.Image? logoImg = await _loadAssetImage(
+      'assets/images/Taapdeel_icon.png',
+      targetWidth: logoTargetWidth,
+    );
+
+    return _buildShareImage(
+      myProduct: myProduct,
+      myImg: myImg,
+      suggestions: shown,
+      sugImgs: sugImgs,
+      theme: theme,
+      logoImg: logoImg,
+      renderScale: safeScale,
+    );
+  }
+
   static String _readReferralCode(BuildContext context) {
     try {
       final PsValueHolder valueHolder =
@@ -105,46 +142,67 @@ class SwapWhatsAppShareService {
     }
   }
 
-  static Future<ui.Image?> _loadProductImage(Product p) async {
-    try {
-      final String? raw = p.defaultPhoto?.imgPath;
-      if (raw == null || raw.trim().isEmpty) return null;
-
-      final String path = raw.trim();
-      final String url = path.startsWith('http://') || path.startsWith('https://')
-          ? path
-          : '${PsConfig.ps_app_image_url}$path';
-
-      final http.Response response = await http
-          .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 8));
-
-      if (response.statusCode != 200) return null;
-
-      final ui.Codec codec = await ui.instantiateImageCodec(
-        response.bodyBytes,
-        targetWidth: 420,
-        targetHeight: 420,
-      );
-      final ui.FrameInfo frame = await codec.getNextFrame();
-      return frame.image;
-    } catch (_) {
-      return null;
+  static Future<ui.Image?> _loadProductImage(
+      Product p, {
+        int targetSize = 420,
+      }) {
+    final String? raw = p.defaultPhoto?.imgPath;
+    if (raw == null || raw.trim().isEmpty) {
+      return Future<ui.Image?>.value(null);
     }
+
+    final String path = raw.trim();
+    final String url = path.startsWith('http://') || path.startsWith('https://')
+        ? path
+        : '${PsConfig.ps_app_image_url}$path';
+    final String cacheKey = '$targetSize::$url';
+
+    return _productImageFutureCache.putIfAbsent(
+      cacheKey,
+          () async {
+        try {
+          final http.Response response = await http
+              .get(Uri.parse(url))
+              .timeout(const Duration(seconds: 8));
+
+          if (response.statusCode != 200) return null;
+
+          final ui.Codec codec = await ui.instantiateImageCodec(
+            response.bodyBytes,
+            targetWidth: targetSize,
+            targetHeight: targetSize,
+          );
+          final ui.FrameInfo frame = await codec.getNextFrame();
+          return frame.image;
+        } catch (_) {
+          return null;
+        }
+      },
+    );
   }
 
-  static Future<ui.Image?> _loadAssetImage(String assetPath) async {
-    try {
-      final ByteData data = await rootBundle.load(assetPath);
-      final ui.Codec codec = await ui.instantiateImageCodec(
-        data.buffer.asUint8List(),
-        targetWidth: 360,
-      );
-      final ui.FrameInfo frame = await codec.getNextFrame();
-      return frame.image;
-    } catch (_) {
-      return null;
-    }
+  static Future<ui.Image?> _loadAssetImage(
+      String assetPath, {
+        int targetWidth = 360,
+      }) {
+    final String cacheKey = '$targetWidth::$assetPath';
+
+    return _assetImageFutureCache.putIfAbsent(
+      cacheKey,
+          () async {
+        try {
+          final ByteData data = await rootBundle.load(assetPath);
+          final ui.Codec codec = await ui.instantiateImageCodec(
+            data.buffer.asUint8List(),
+            targetWidth: targetWidth,
+          );
+          final ui.FrameInfo frame = await codec.getNextFrame();
+          return frame.image;
+        } catch (_) {
+          return null;
+        }
+      },
+    );
   }
 
   static Future<Uint8List> _buildShareImage({
@@ -154,10 +212,15 @@ class SwapWhatsAppShareService {
     required List<ui.Image?> sugImgs,
     required SwapShareTheme theme,
     required ui.Image? logoImg,
+    double renderScale = 1,
 
   }) async {
+    final double safeScale = renderScale.clamp(0.35, 1.0).toDouble();
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(recorder);
+    if (safeScale != 1) {
+      canvas.scale(safeScale);
+    }
 
     _drawBackground(canvas, theme);
 
@@ -183,7 +246,10 @@ class SwapWhatsAppShareService {
     _drawFooter(canvas, theme);
 
     final ui.Picture picture = recorder.endRecording();
-    final ui.Image img = await picture.toImage(_canvasW.toInt(), _canvasH.toInt());
+    final ui.Image img = await picture.toImage(
+      (_canvasW * safeScale).round(),
+      (_canvasH * safeScale).round(),
+    );
     final ByteData? byteData = await img.toByteData(format: ui.ImageByteFormat.png);
     return byteData!.buffer.asUint8List();
   }

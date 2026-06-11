@@ -26,8 +26,10 @@ import 'package:provider/single_child_widget.dart';
 import '../../../api/ps_url.dart';
 import '../../../db/common/ps_shared_preferences.dart';
 import '../../../viewobject/product.dart';
+import '../../../viewobject/category.dart';
 import '../Contacts/search_provider.dart';
 import '../Product/product_widget.dart';
+import '../category/category_personalization.dart';
 import '../item/share_theme/product_share_options.dart';
 import '../common/taapdeel/taapdeel_scaffold.dart';
 import '../wish_Items/wish_item_entry_container_view.dart';
@@ -77,11 +79,11 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
   // ignore: unused_field
   PaidAdItemRepository? paidAdItemRepository;
 
-  String _chipsSelectedKey = 'prefcat';
-  String _chipsSelectedTitle = 'لك انت';
-  String _chipsSelectedUrl = PsUrl.ps_Prefcat_bulk_url;
+  String _chipsSelectedKey = 'explore';
+  String _chipsSelectedTitle = 'الأحدث';
+  String _chipsSelectedUrl = PsUrl.ps_explore_url;
 
-  final int count = 30;
+  final int count = 20;
 
   final TextEditingController userInputItemNameTextEditingController =
   TextEditingController();
@@ -91,6 +93,14 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
   // ignore: unused_field
   String _authStatus = 'Unknown';
   String _catId = '';
+
+  String _exploreSelectedCatId = '';
+  List<Category> _exploreCategoriesWithProducts = <Category>[];
+  int _exploreCategoriesProbeToken = 0;
+
+  String _brandsSelectedCatId = '';
+  List<Category> _brandsCategoriesWithProducts = <Category>[];
+  int _brandsCategoriesProbeToken = 0;
 
   bool _depsReady = false;
 
@@ -104,9 +114,9 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
   final WishItemsProvider _wishItemsProvider = WishItemsProvider();
 
   final Map<String, GlobalKey> _worldCardKeys = <String, GlobalKey>{
-    'prefcat': GlobalKey(),
     'family': GlobalKey(),
     'premium': GlobalKey(),
+    'brands': GlobalKey(),
     'explore': GlobalKey(),
     'wish': GlobalKey(),
   };
@@ -126,11 +136,11 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
 
   static const List<_WorldCardData> _guestWorldCards = [
     _WorldCardData(
-      keyName: 'prefcat',
-      title: 'لك انت',
-      subtitle: 'حسب اهتماماتك',
-      url: PsUrl.ps_Prefcat_bulk_url,
-      icon: Icons.explore_rounded,
+      keyName: 'explore',
+      title: 'الأحدث',
+      subtitle: 'أحدث الإضافات',
+      url: PsUrl.ps_explore_url,
+      icon: Icons.rocket_launch_rounded,
       gradient: <Color>[Color(0xFFB8F4FF), Color(0xFF0A7EA0)],
       accent: Color(0xFF0C587A),
     ),
@@ -144,11 +154,11 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
       accent: Color(0xFFE0A100),
     ),
     _WorldCardData(
-      keyName: 'explore',
-      title: 'الأحدث',
-      subtitle: 'أحدث الإضافات',
-      url: PsUrl.ps_explore_url,
-      icon: Icons.rocket_launch_rounded,
+      keyName: 'brands',
+      title: 'براندز',
+      subtitle: 'علامات عالمية',
+      url: PsUrl.ps_brands_url,
+      icon: Icons.verified_rounded,
       gradient: <Color>[Color(0xFFFF6A6A), Color(0xFFFF8E8E)],
       accent: Color(0xFF011934),
     ),
@@ -159,8 +169,8 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
       url: PsUrl.ps_get_wishlist_items_url,
       icon: Icons.favorite_border_rounded,
       gradient: <Color>[
-        Color(0xFF5B21B6), // deep royal purple
-        Color(0xFFFF6B9A), // warm story pink // playful pink-lilac // bright turquoise
+        Color(0xFF5B21B6),
+        Color(0xFFFF6B9A),
       ],
       accent: Color(0xFFFFD166),
     ),
@@ -169,7 +179,7 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
   List<_WorldCardData> _buildWorldCards(bool loggedIn) {
     if (!loggedIn) return _guestWorldCards;
     return <_WorldCardData>[
-      ..._guestWorldCards.sublist(0, 1),
+      ..._guestWorldCards,
       const _WorldCardData(
         keyName: 'family',
         title: 'العائلة والأصدقاء',
@@ -179,7 +189,6 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
         gradient: <Color>[Color(0xFF4FACFE), Color(0xFF00F2FE)],
         accent: Color(0xFF011934),
       ),
-      ..._guestWorldCards.sublist(1),
     ];
   }
 
@@ -272,8 +281,8 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
       if (!loading && items.isEmpty) {
         sp.loadSection(
           filterUrl: _chipsSelectedUrl,
-          catId: _catId,
-          pageSize: 50,
+          catId: _activeProductCatId(),
+          pageSize: 20,
         ).catchError((e, st) {});
       }
     }
@@ -356,11 +365,239 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
       SearchProvider.of(context, listen: false).invalidatePrefCatCache();
 
       setState(() {
-        _chipsSelectedKey = 'prefcat';
-        _chipsSelectedTitle = 'لك انت';
-        _chipsSelectedUrl = PsUrl.ps_Prefcat_bulk_url;
+        _chipsSelectedKey = 'explore';
+        _chipsSelectedTitle = 'الاحدث';
+        _chipsSelectedUrl = PsUrl.ps_explore_url;
       });
       await _reloadHomeSections();
+    }
+  }
+
+
+  String _activeProductCatId() {
+    if (_chipsSelectedKey == 'explore') {
+      return _exploreSelectedCatId;
+    }
+
+    if (_chipsSelectedKey == 'brands') {
+      return _brandsSelectedCatId;
+    }
+
+    return _catId;
+  }
+
+  String _readUserGender() {
+    try {
+      final dynamic v = (valueHolder as dynamic).userGender;
+      if (v is String) return v.trim();
+    } catch (_) {}
+    return '';
+  }
+
+  String _readUserAgeRange() {
+    try {
+      final dynamic v = (valueHolder as dynamic).userAgeRange;
+      if (v is String) return v.trim();
+    } catch (_) {}
+    return '';
+  }
+
+  List<BaseSectionCategoryChip> _exploreCategoryChips() {
+    return _exploreCategoriesWithProducts
+        .map((Category category) {
+      final String id = (category.catId ?? '').toString().trim();
+      final String name = (category.catName ?? '').toString().trim();
+      if (id.isEmpty || name.isEmpty) return null;
+      return BaseSectionCategoryChip(id: id, name: name);
+    })
+        .whereType<BaseSectionCategoryChip>()
+        .toList();
+  }
+
+  List<BaseSectionCategoryChip> _brandsCategoryChips() {
+    return _brandsCategoriesWithProducts
+        .map((Category category) {
+      final String id = (category.catId ?? '').toString().trim();
+      final String name = (category.catName ?? '').toString().trim();
+      if (id.isEmpty || name.isEmpty) return null;
+      return BaseSectionCategoryChip(id: id, name: name);
+    })
+        .whereType<BaseSectionCategoryChip>()
+        .toList();
+  }
+
+  List<Category> _sortedMainCategoriesForExplore() {
+    final List<Category> categories = List<Category>.from(
+      _categoryProvider?.categoryList.data ?? <Category>[],
+    );
+
+    categories.removeWhere((Category category) {
+      final String id = (category.catId ?? '').toString().trim();
+      final String name = (category.catName ?? '').toString().trim();
+      return id.isEmpty || id == '0' || name.isEmpty;
+    });
+
+    sortCategoriesByProfile(
+      categories: categories,
+      gender: _readUserGender(),
+      ageRange: _readUserAgeRange(),
+    );
+
+    return categories;
+  }
+
+  Future<void> _refreshExploreCategoryChips() async {
+    if (!mounted) return;
+    if (_categoryProvider == null) return;
+
+    final List<Category> sortedCategories = _sortedMainCategoriesForExplore();
+    if (sortedCategories.isEmpty) return;
+
+    final int token = ++_exploreCategoriesProbeToken;
+    final SearchProvider sp = SearchProvider.of(context, listen: false);
+    final List<Category> availableCategories = <Category>[];
+
+    for (final Category category in sortedCategories) {
+      if (!mounted || token != _exploreCategoriesProbeToken) return;
+
+      final String catId = (category.catId ?? '').toString().trim();
+      if (catId.isEmpty) continue;
+
+      final bool hasProducts = await sp.sectionCategoryHasProducts(
+        filterUrl: PsUrl.ps_explore_url,
+        catId: catId,
+        probeLimit: 1,
+      );
+
+      if (hasProducts) {
+        availableCategories.add(category);
+      }
+    }
+
+    if (!mounted || token != _exploreCategoriesProbeToken) return;
+
+    setState(() {
+      _exploreCategoriesWithProducts = availableCategories;
+
+      if (_exploreSelectedCatId.isNotEmpty &&
+          !availableCategories.any(
+                (Category c) => (c.catId ?? '').toString().trim() == _exploreSelectedCatId,
+          )) {
+        _exploreSelectedCatId = '';
+      }
+    });
+  }
+
+
+  Future<void> _refreshBrandsCategoryChips() async {
+    if (!mounted) return;
+    if (_categoryProvider == null) return;
+
+    final List<Category> sortedCategories = _sortedMainCategoriesForExplore();
+    if (sortedCategories.isEmpty) return;
+
+    final int token = ++_brandsCategoriesProbeToken;
+    final SearchProvider sp = SearchProvider.of(context, listen: false);
+    final List<Category> availableCategories = <Category>[];
+
+    for (final Category category in sortedCategories) {
+      if (!mounted || token != _brandsCategoriesProbeToken) return;
+
+      final String catId = (category.catId ?? '').toString().trim();
+      if (catId.isEmpty) continue;
+
+      final bool hasProducts = await sp.sectionCategoryHasProducts(
+        filterUrl: PsUrl.ps_brands_url,
+        catId: catId,
+        probeLimit: 1,
+      );
+
+      if (hasProducts) {
+        availableCategories.add(category);
+      }
+    }
+
+    if (!mounted || token != _brandsCategoriesProbeToken) return;
+
+    setState(() {
+      _brandsCategoriesWithProducts = availableCategories;
+
+      if (_brandsSelectedCatId.isNotEmpty &&
+          !availableCategories.any(
+                (Category c) => (c.catId ?? '').toString().trim() == _brandsSelectedCatId,
+          )) {
+        _brandsSelectedCatId = '';
+      }
+    });
+  }
+
+  Future<void> _onExploreCategorySelected(String catId) async {
+    final String cleanCatId = catId.trim();
+    final SearchProvider sp = SearchProvider.of(context, listen: false);
+
+    if (_exploreSelectedCatId == cleanCatId &&
+        !sp.sectionLoading(PsUrl.ps_explore_url)) {
+      return;
+    }
+
+    setState(() {
+      _exploreSelectedCatId = cleanCatId;
+      _chipsSelectedKey = 'explore';
+      _chipsSelectedTitle = 'الأحدث';
+      _chipsSelectedUrl = PsUrl.ps_explore_url;
+    });
+
+    // ✅ مهم: امسح نتائج الأحدث القديمة عشان اختيار الـ category يجيب صفحة جديدة من السيرفر.
+    sp.clearSection(PsUrl.ps_explore_url);
+
+    await sp.loadSection(
+      filterUrl: PsUrl.ps_explore_url,
+      catId: cleanCatId,
+      pageSize: 20,
+    );
+
+    // ✅ ارجع لأول القائمة بعد تغيير الـ category، لكن بعد نزول البيانات لتجنب مشاكل extent.
+    if (mounted && widget.scrollController.hasClients) {
+      widget.scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+
+  Future<void> _onBrandsCategorySelected(String catId) async {
+    final String cleanCatId = catId.trim();
+    final SearchProvider sp = SearchProvider.of(context, listen: false);
+
+    if (_brandsSelectedCatId == cleanCatId &&
+        !sp.sectionLoading(PsUrl.ps_brands_url)) {
+      return;
+    }
+
+    setState(() {
+      _brandsSelectedCatId = cleanCatId;
+      _chipsSelectedKey = 'brands';
+      _chipsSelectedTitle = 'براندز';
+      _chipsSelectedUrl = PsUrl.ps_brands_url;
+    });
+
+    // مهم: امسح نتائج براندز القديمة عشان اختيار الـ category يجيب صفحة جديدة من السيرفر.
+    sp.clearSection(PsUrl.ps_brands_url);
+
+    await sp.loadSection(
+      filterUrl: PsUrl.ps_brands_url,
+      catId: cleanCatId,
+      pageSize: 20,
+    );
+
+    if (mounted && widget.scrollController.hasClients) {
+      widget.scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
     }
   }
 
@@ -564,21 +801,21 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
       } else {
         await sp.loadInitialSection(
           filterUrl: _chipsSelectedUrl,
-          catId: _catId,
-          pageSize: 50,
+          catId: _activeProductCatId(),
+          pageSize: 20,
         );
       }
 
       if (!mounted) return;
 
-      // ✅ FIX: بدون delay — preload فوري في الخلفية
+      // حمّل السيكشن الأساسي أولاً، ثم حمّل باقي السيكشنات بالتدريج في الخلفية.
       sp.preloadOtherSections(
         currentUrl: _chipsSelectedKey == 'wish'
             ? PsUrl.ps_Prefcat_bulk_url
             : _chipsSelectedUrl,
-        catId: _catId,
+        catId: '',
         isLoggedIn: logged,
-        pageSize: 50,
+        pageSize: 20,
       );
     } catch (e, st) {
       dev.log('_reloadHomeSections error', error: e, stackTrace: st);
@@ -650,6 +887,12 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
                   textColor: Colors.white,
                 );
               }
+
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                _refreshExploreCategoryChips();
+                _refreshBrandsCategoryChips();
+              });
             });
 
             return _categoryProvider!;
@@ -801,7 +1044,7 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
                       BaseSectionGridSliver(
                         title: _chipsSelectedTitle,
                         url: _chipsSelectedUrl,
-                        catId: () => _catId,
+                        catId: () => _activeProductCatId(),
                         recentProvider: () => _recentProductProvider!,
                         showHeader: false,
                         childAspectRatio: aspectRatio,
@@ -810,7 +1053,25 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
                           onTap: _openEditInterests,
                         )
                             : null,
-                        // ✅ الـ chips تظهر تلقائياً — showSubCategoryChips: true (default)
+                        loadMorePageSize: 20,
+                        scrollController: widget.scrollController,
+                        categoryChips: _chipsSelectedKey == 'explore'
+                            ? _exploreCategoryChips()
+                            : _chipsSelectedKey == 'brands'
+                            ? _brandsCategoryChips()
+                            : null,
+                        selectedCategoryChipId: _chipsSelectedKey == 'explore'
+                            ? _exploreSelectedCatId
+                            : _chipsSelectedKey == 'brands'
+                            ? _brandsSelectedCatId
+                            : null,
+                        onCategoryChipSelected: _chipsSelectedKey == 'explore'
+                            ? _onExploreCategorySelected
+                            : _chipsSelectedKey == 'brands'
+                            ? _onBrandsCategorySelected
+                            : null,
+                        // ✅ في تاب الأحدث وبراندز التصنيفات تأتي من CategoryProvider مرتبة حسب السن والنوع،
+                        // وتضغط على API reload بـ cat_id بدل الفلترة المحلية.
                         cardBuilder: ({
                           required BuildContext context,
                           required Product product,

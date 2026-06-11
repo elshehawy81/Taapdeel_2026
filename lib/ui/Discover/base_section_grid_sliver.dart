@@ -62,6 +62,17 @@ class _SubCatChipData {
   int get hashCode => Object.hash(id, name);
 }
 
+class BaseSectionCategoryChip {
+  const BaseSectionCategoryChip({
+    required this.id,
+    required this.name,
+  });
+
+  final String id;
+  final String name;
+}
+
+
 /// ======================================================
 /// ✅ BaseSectionGridSliver (Tabs Mode) — مع Pagination + Sub-Category Chips
 /// ======================================================
@@ -85,6 +96,10 @@ class BaseSectionGridSliver extends StatefulWidget {
     this.loadMorePageSize = 20,
     this.showSubCategoryChips = true,
     this.leadingSubCategoryChip,
+    this.categoryChips,
+    this.selectedCategoryChipId,
+    this.onCategoryChipSelected,
+    this.scrollController,
   }) : super(key: key);
 
   final String title;
@@ -110,6 +125,18 @@ class BaseSectionGridSliver extends StatefulWidget {
   /// يستخدم هنا لزر "تعديل" الخاص بتعديل الاهتمامات.
   final Widget? leadingSubCategoryChip;
 
+  /// ✅ Chips خارجية ثابتة/مرتبة من الصفحة الأب.
+  /// تستخدم في تاب "الأحدث" لعرض التصنيفات الرئيسية المرتبة حسب السن والنوع،
+  /// وليس التصنيفات المستخرجة محلياً من المنتجات.
+  final List<BaseSectionCategoryChip>? categoryChips;
+  final String? selectedCategoryChipId;
+  final ValueChanged<String>? onCategoryChipSelected;
+
+  /// ✅ ScrollController الخاص بالـ CustomScrollView الأب.
+  /// مهم لأن الـ Grid هنا shrinkWrap و NeverScrollableScrollPhysics،
+  /// وبالتالي الـ NotificationListener الداخلي لا يلتقط Scroll كافي لتحميل صفحات جديدة.
+  final ScrollController? scrollController;
+
   @override
   State<BaseSectionGridSliver> createState() => _BaseSectionGridSliverState();
 }
@@ -119,6 +146,56 @@ class _BaseSectionGridSliverState extends State<BaseSectionGridSliver> {
 
   // ✅ FIX: throttle الـ scroll check — لا يتنفذ أكثر من مرة كل 500ms
   DateTime? _lastLoadMoreCheck;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scrollController?.addListener(_onParentScroll);
+  }
+
+  @override
+  void didUpdateWidget(covariant BaseSectionGridSliver oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.scrollController != widget.scrollController) {
+      oldWidget.scrollController?.removeListener(_onParentScroll);
+      widget.scrollController?.addListener(_onParentScroll);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.scrollController?.removeListener(_onParentScroll);
+    super.dispose();
+  }
+
+  void _onParentScroll() {
+    if (!mounted) return;
+
+    final ScrollController? controller = widget.scrollController;
+    if (controller == null || !controller.hasClients) return;
+
+    // حمّل الصفحة التالية قبل الوصول لنهاية الصفحة بقليل.
+    if (controller.position.extentAfter > 700) return;
+
+    final DateTime now = DateTime.now();
+    if (_lastLoadMoreCheck != null &&
+        now.difference(_lastLoadMoreCheck!) <
+            const Duration(milliseconds: 500)) {
+      return;
+    }
+
+    _lastLoadMoreCheck = now;
+
+    final SearchProvider sp = SearchProvider.of(context, listen: false);
+
+    _maybeLoadMore(
+      sp,
+      sp.sectionProducts(widget.url),
+      sp.sectionLoading(widget.url),
+      sp.sectionLoadingMore(widget.url),
+    );
+  }
 
   void _maybeLoadMore(
       SearchProvider sp,
@@ -149,18 +226,31 @@ class _BaseSectionGridSliverState extends State<BaseSectionGridSliver> {
     return SliverToBoxAdapter(
       child: Selector<SearchProvider, _SectionData>(
         selector: (_, sp) {
-          final rawSubCats = sp.sectionSubCats(widget.url);
-          final chips = rawSubCats
-              .map((s) => _SubCatChipData(id: s.id, name: s.name))
-              .toList();
+          final List<_SubCatChipData> chips;
+          final bool useExternalCategoryChips = widget.categoryChips != null;
+
+          if (useExternalCategoryChips) {
+            chips = widget.categoryChips!
+                .map((s) => _SubCatChipData(id: s.id, name: s.name))
+                .toList();
+          } else {
+            final rawSubCats = sp.sectionSubCats(widget.url);
+            chips = rawSubCats
+                .map((s) => _SubCatChipData(id: s.id, name: s.name))
+                .toList();
+          }
 
           return _SectionData(
-            items: sp.sectionFilteredProducts(widget.url),
+            items: useExternalCategoryChips
+                ? sp.sectionProducts(widget.url)
+                : sp.sectionFilteredProducts(widget.url),
             loading: sp.sectionLoading(widget.url),
             loadingMore: sp.sectionLoadingMore(widget.url),
             hasMore: sp.sectionHasMore(widget.url),
             subCats: chips,
-            selectedSubCat: sp.sectionSelectedSubCat(widget.url),
+            selectedSubCat: useExternalCategoryChips
+                ? (widget.selectedCategoryChipId ?? '')
+                : sp.sectionSelectedSubCat(widget.url),
           );
         },
         shouldRebuild: (prev, next) => prev != next,
@@ -207,6 +297,12 @@ class _BaseSectionGridSliverState extends State<BaseSectionGridSliver> {
                       selectedId: selectedSubCat,
                       leadingWidget: widget.leadingSubCategoryChip,
                       onSelect: (id) {
+                        final externalHandler = widget.onCategoryChipSelected;
+                        if (externalHandler != null) {
+                          externalHandler(id);
+                          return;
+                        }
+
                         final sp = SearchProvider.of(context, listen: false);
                         sp.selectSectionSubCat(widget.url, id);
                       },

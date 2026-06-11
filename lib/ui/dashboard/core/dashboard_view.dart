@@ -124,6 +124,14 @@ class _HomeViewState extends State<DashboardView>
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   bool isResumed = false;
 
+  // ✅ Coach animation for first-time users: guides attention to Add Product
+  // after they have spent time/scrolling in the home product feed.
+  static const String _kAddProductCoachSeenKey =
+      'taapdeel_add_product_coach_seen_v1';
+  bool _showAddProductCoach = false;
+  bool _addProductCoachWasTriggered = false;
+  Timer? _addProductCoachTimer;
+
   CategoryRepository? categoryRepository;
   UserRepository? userRepository;
   AppInfoRepository? appInfoRepository;
@@ -269,6 +277,71 @@ class _HomeViewState extends State<DashboardView>
     FocusManager.instance.primaryFocus?.unfocus();
   }
 
+  bool _isHomeFeedVisibleForAddCoach() {
+    return _currentIndex == PsConst.REQUEST_CODE__DASHBOARD_SEARCH_FRAGMENT ||
+        _currentIndex == PsConst.REQUEST_CODE__MENU_HOME_FRAGMENT ||
+        _currentIndex == PsConst.REQUEST_CODE__DASHBOARD_MESSAGE_FRAGMENT;
+  }
+
+  Future<bool> _wasAddProductCoachSeen() async {
+    try {
+      return PsSharedPreferences.instance.shared
+          .getBool(_kAddProductCoachSeenKey) ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _markAddProductCoachSeen() async {
+    try {
+      await PsSharedPreferences.instance.shared
+          .setBool(_kAddProductCoachSeenKey, true);
+    } catch (_) {}
+  }
+
+  Future<void> _bootstrapAddProductCoach() async {
+    // Show only once per install/user. It appears after the user has had time
+    // to browse products, or sooner if they scroll down the home feed.
+    if (await _wasAddProductCoachSeen()) return;
+
+    _addProductCoachTimer?.cancel();
+    _addProductCoachTimer = Timer(const Duration(seconds: 8), () {
+      _triggerAddProductCoach();
+    });
+  }
+
+  void _onHomeScrollForAddProductCoach() {
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.offset < 420) return;
+    _triggerAddProductCoach();
+  }
+
+  void _triggerAddProductCoach() {
+    if (!mounted) return;
+    if (_addProductCoachWasTriggered) return;
+    if (!_isHomeFeedVisibleForAddCoach()) return;
+
+    _addProductCoachWasTriggered = true;
+    setState(() {
+      _showAddProductCoach = true;
+    });
+  }
+
+  Future<void> _dismissAddProductCoach({bool persist = true}) async {
+    _addProductCoachTimer?.cancel();
+
+    if (mounted && _showAddProductCoach) {
+      setState(() {
+        _showAddProductCoach = false;
+      });
+    }
+
+    if (persist) {
+      await _markAddProductCoachSeen();
+    }
+  }
+
   void _goHomeSearch() {
     _clearHomeSearchFocus();
 
@@ -340,6 +413,9 @@ class _HomeViewState extends State<DashboardView>
 
   Future<void> updateSelectedIndexWithAnimation(String? title, int? index) async {
     _clearHomeSearchFocus();
+    if (index == PsConst.REQUEST_CODE__DASHBOARD_ITEM_UPLOAD_FRAGMENT) {
+      unawaited(_dismissAddProductCoach());
+    }
 
     await animationController.reverse().then<dynamic>((void data) {
       if (!mounted) {
@@ -401,6 +477,9 @@ class _HomeViewState extends State<DashboardView>
           : PsConst.REQUEST_CODE__DASHBOARD_SEARCH_FRAGMENT;
     }
 
+    _scrollController.addListener(_onHomeScrollForAddProductCoach);
+    _bootstrapAddProductCoach();
+
     _initFcmOnceAfterFirstBuild();
   }
 
@@ -433,6 +512,8 @@ class _HomeViewState extends State<DashboardView>
 
   @override
   void dispose() {
+    _addProductCoachTimer?.cancel();
+    _scrollController.removeListener(_onHomeScrollForAddProductCoach);
     _scrollController.dispose();
     _homeSearchCtrl.dispose();
     _homeSearchFocusNode.dispose();
@@ -678,10 +759,10 @@ class _HomeViewState extends State<DashboardView>
                 if (!mounted) return;
 
                 final String uid =
-                    (Provider.of<PsValueHolder>(innerContext, listen: false)
-                                .loginUserId ??
-                            '')
-                        .trim();
+                (Provider.of<PsValueHolder>(innerContext, listen: false)
+                    .loginUserId ??
+                    '')
+                    .trim();
 
                 if (uid.isEmpty || uid == 'nologinuser') return;
 
@@ -710,9 +791,9 @@ class _HomeViewState extends State<DashboardView>
           }
 
           final String liveUid =
-              (Provider.of<PsValueHolder>(innerContext, listen: false).loginUserId ??
-                      '')
-                  .trim();
+          (Provider.of<PsValueHolder>(innerContext, listen: false).loginUserId ??
+              '')
+              .trim();
 
           if (liveUid.isNotEmpty &&
               liveUid != 'nologinuser' &&
@@ -769,12 +850,16 @@ class _HomeViewState extends State<DashboardView>
                       currentIndex: _currentIndex,
                       getBottomNavIndex: getBottonNavigationIndex,
                       profileUnreadCount: totalProfileBadge,
+                      showAddProductCoach: _showAddProductCoach,
                       onTabSelected: (int index) {
                         final dynamic ret =
                         getIndexFromBottonNavigationIndex(index);
                         updateSelectedIndexWithAnimation(ret[0], ret[1]);
                       },
-                      onAddPressed: () => _showAddBottomSheet(context),
+                      onAddPressed: () {
+                        unawaited(_dismissAddProductCoach());
+                        _showAddBottomSheet(context);
+                      },
                     );
                   },
                 ),
