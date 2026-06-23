@@ -1,0 +1,712 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "subCategoryId": "subcat5b2de160e11357e440d2c1c50467590b",
+      "catId": "cat2c12700863723660dcadcbaa62f57924",
+      "subCategoryNameAr": "مستلزمات الطفل",
+      "subCategoryNameEn": "Baby Essentials",
+      "tags": [
+        { "id": "t_baby_stroller", "ar": "عربية أطفال", "en": "Stroller" },
+        { "id": "t_baby_car_seat", "ar": "كرسي سيارة", "en": "Car Seat" },
+        { "id": "t_baby_diapers", "ar": "حفاضات", "en": "Diapers" },
+        { "id": "t_baby_feeding", "ar": "رضاعات/إطعام", "en": "Feeding" },
+        { "id": "t_baby_monitor", "ar": "مراقبة طفل", "en": "Baby Monitor" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat3ef0564b23cd221e4259579a9ddf3f6f",
+      "catId": "cat2d0c994d0d7991db5b4a177ac80d7b5e",
+      "subCategoryNameAr": "ملابس واحذية",
+      "subCategoryNameEn": "Clothes & Shoes",
+      "tags": [
+        { "id": "t_fashion_men", "ar": "رجالي", "en": "Men" },
+        { "id": "t_fashion_women", "ar": "حريمي", "en": "Women" },
+        { "id": "t_fashion_kids", "ar": "أطفال", "en": "Kids" },
+        { "id": "t_fashion_sportswear", "ar": "ملابس رياضية", "en": "Sportswear" },
+        { "id": "t_fashion_accessories", "ar": "إكسسوارات", "en": "Accessories" }
+      ]
+    },
+    {
+      "subCategoryId": "subcataa53ee8921490055e2d78aace3ad710a",
+      "catId": "cat2d0c994d0d7991db5b4a177ac80d7b5e",
+      "subCategoryNameAr": "إكسسوارات",
+      "subCategoryNameEn": "Accessories",
+      "tags": [
+        { "id": "t_access_watch", "ar": "ساعة", "en": "Watch" },
+        { "id": "t_access_glasses", "ar": "نظارة", "en": "Glasses" },
+        { "id": "t_access_bag", "ar": "شنطة", "en": "Bag" },
+        { "id": "t_access_belt", "ar": "حزام", "en": "Belt" },
+        { "id": "t_access_cap", "ar": "كاب", "en": "Cap" }
+      ]
+    },
+    {
+      "subCategoryId": "subcate8c5bddb89864bd741e237832fae18bb",
+      "catId": "cat2d0c994d0d7991db5b4a177ac80d7b5e",
+      "subCategoryNameAr": "العناية الشخصية",
+      "subCategoryNameEn": "Personal Care",
+      "tags": [
+        { "id": "t_care_shaver", "ar": "ماكينة حلاقة", "en": "Shaver" },
+        { "id": "t_care_perfume", "ar": "عطر", "en": "Perfume" },
+        { "id": "t_care_cream", "ar": "كريم", "en": "Cream" },
+        { "id": "t_care_cleanser", "ar": "غسول", "en": "Cleanser" },
+        { "id": "t_care_deodorant", "ar": "مزيل عرق", "en": "Deodorant" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat88be821e3cb84cc0c049f7d92028fe48",
+      "catId": "cat3ed818f44f3a3e3d49a2798b4c51f5b9",
+      "subCategoryNameAr": "اجهزة رياضية",
+      "subCategoryNameEn": "Fitness Equipment",
+      "tags": [
+        { "id": "t_fit_treadmill", "ar": "مشاية", "en": "Treadmill" },
+        { "id": "t_fit_bike", "ar": "عجلة", "en": "Exercise Bike" },
+        { "id": "t_fit_weights", "ar": "أوزان", "en": "Weights" },
+        { "id": "t_fit_dumbbells", "ar": "دامبل", "en": "Dumbbells" },
+        { "id": "t_fit_bench", "ar": "بنش", "en": "Bench" }
+      ]
+    },
+    {
+      "subCategoryId": "subcata833382a51e9d684e6209f9dd2fdb3c6",
+      "catId": "cat3ed818f44f3a3e3d49a2798b4c51f5b9",
+      "subCategoryNameAr": "تنس طاولة",
+      "subCategoryNameEn": "Table Tennis",
+      "tags": [
+        { "id": "t_tt_racket", "ar": "مضرب", "en": "Paddle" },
+        { "id": "t_tt_blade", "ar": "خشبة", "en": "Blade" },
+        { "id": "t_tt_rubber", "ar": "جلدة", "en": "Rubber" },
+        { "id": "t_tt_ball", "ar": "كرات", "en": "Balls" },
+        { "id": "t_tt_net", "ar": "شبكة", "en": "Net" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatd3506c471a68abe4467681f13f7362cb",
+      "catId": "cat3ed818f44f3a3e3d49a2798b4c51f5b9",
+      "subCategoryNameAr": "ادوات سباحه",
+      "subCategoryNameEn": "Swimming Gear",
+      "tags": [
+        { "id": "t_swim_suit", "ar": "مايوه", "en": "Swimsuit" },
+        { "id": "t_swim_goggles", "ar": "نظارة سباحة", "en": "Goggles" },
+        { "id": "t_swim_cap", "ar": "قبعة سباحة", "en": "Swim Cap" },
+        { "id": "t_swim_float", "ar": "عوامة", "en": "Float" },
+        { "id": "t_swim_bag", "ar": "شنطة سباحة", "en": "Swim Bag" }
+      ]
+    },
+    {
+      "subCategoryId": "subcate1f9211a58b5bdc65547c018b70d4997",
+      "catId": "cat3ed818f44f3a3e3d49a2798b4c51f5b9",
+      "subCategoryNameAr": "تنس",
+      "subCategoryNameEn": "Tennis",
+      "tags": [
+        { "id": "t_tennis_racket", "ar": "مضرب تنس", "en": "Tennis Racket" },
+        { "id": "t_tennis_ball", "ar": "كرة تنس", "en": "Tennis Ball" },
+        { "id": "t_tennis_bag", "ar": "شنطة تنس", "en": "Tennis Bag" },
+        { "id": "t_tennis_grip", "ar": "جريب", "en": "Grip" },
+        { "id": "t_tennis_strings", "ar": "خيوط", "en": "Strings" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatfad3094b48a41e0b9c2319e3e6ca9c98",
+      "catId": "cat3ed818f44f3a3e3d49a2798b4c51f5b9",
+      "subCategoryNameAr": "اسكواش",
+      "subCategoryNameEn": "Squash",
+      "tags": [
+        { "id": "t_squash_racket", "ar": "مضرب اسكواش", "en": "Squash Racket" },
+        { "id": "t_squash_ball", "ar": "كرة اسكواش", "en": "Squash Ball" },
+        { "id": "t_squash_bag", "ar": "شنطة مضرب", "en": "Racket Bag" },
+        { "id": "t_squash_grip", "ar": "جريب", "en": "Grip" },
+        { "id": "t_squash_goggles", "ar": "نظارة حماية", "en": "Protective Goggles" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat4ea17973346acf5c0d209df7bc18e426",
+      "catId": "cat5dfc0138547b926dccc5ee269b1cd042",
+      "subCategoryNameAr": "ادوات مكتبية",
+      "subCategoryNameEn": "Stationery",
+      "tags": [
+        { "id": "t_stationery_pen", "ar": "أقلام", "en": "Pens" },
+        { "id": "t_stationery_notebook", "ar": "كشاكيل", "en": "Notebooks" },
+        { "id": "t_stationery_files", "ar": "ملفات", "en": "Folders" },
+        { "id": "t_stationery_calculator", "ar": "آلة حاسبة", "en": "Calculator" },
+        { "id": "t_stationery_art", "ar": "أدوات رسم", "en": "Art Supplies" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat50ea812221c3dec35664ad42ef4aee20",
+      "catId": "cat5dfc0138547b926dccc5ee269b1cd042",
+      "subCategoryNameAr": "الزي المدرسى",
+      "subCategoryNameEn": "School Uniform",
+      "tags": [
+        { "id": "t_uniform_shirt", "ar": "قميص", "en": "Shirt" },
+        { "id": "t_uniform_pants", "ar": "بنطلون", "en": "Pants" },
+        { "id": "t_uniform_skirt", "ar": "جيبة", "en": "Skirt" },
+        { "id": "t_uniform_jacket", "ar": "جاكيت", "en": "Jacket" },
+        { "id": "t_uniform_sweater", "ar": "كارديجان/سويتر", "en": "Sweater" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat67bb8ac0b09c882e462707c30839000a",
+      "catId": "cat5dfc0138547b926dccc5ee269b1cd042",
+      "subCategoryNameAr": "شنط مدرسية",
+      "subCategoryNameEn": "School Bags",
+      "tags": [
+        { "id": "t_schoolbag_backpack", "ar": "شنطة ظهر", "en": "Backpack" },
+        { "id": "t_schoolbag_lunchbox", "ar": "لانش بوكس", "en": "Lunch Box" },
+        { "id": "t_schoolbag_trolley", "ar": "شنطة بعجلة", "en": "Trolley Bag" },
+        { "id": "t_schoolbag_pencilcase", "ar": "مقلمة", "en": "Pencil Case" },
+        { "id": "t_schoolbag_waterbottle", "ar": "زجاجة مياه", "en": "Water Bottle" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat8cd516f5c0730d6bf4a954c15c9c0e59",
+      "catId": "cat5dfc0138547b926dccc5ee269b1cd042",
+      "subCategoryNameAr": "كتب مدرسية وخارجية",
+      "subCategoryNameEn": "School & External Books",
+      "tags": [
+        { "id": "t_schoolbooks_textbook", "ar": "كتاب مدرسي", "en": "Textbook" },
+        { "id": "t_schoolbooks_workbook", "ar": "كتاب تدريبات", "en": "Workbook" },
+        { "id": "t_schoolbooks_reference", "ar": "مرجع", "en": "Reference" },
+        { "id": "t_schoolbooks_notes", "ar": "مذكرات", "en": "Notes" },
+        { "id": "t_schoolbooks_exam", "ar": "مراجعة/امتحانات", "en": "Exam Prep" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatacf8a7b25079f03b3851d01b36ce45c4",
+      "catId": "cat5dfc0138547b926dccc5ee269b1cd042",
+      "subCategoryNameAr": "ازياء تنكرية",
+      "subCategoryNameEn": "Costumes",
+      "tags": [
+        { "id": "t_costume_kids", "ar": "أزياء أطفال", "en": "Kids Costumes" },
+        { "id": "t_costume_accessories", "ar": "إكسسوارات تنكرية", "en": "Costume Accessories" },
+        { "id": "t_costume_masks", "ar": "أقنعة", "en": "Masks" },
+        { "id": "t_costume_superhero", "ar": "سوبر هيرو", "en": "Superhero" },
+        { "id": "t_costume_party", "ar": "حفلات", "en": "Party" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat3de6fc10466fbda791e019c1204fd681",
+      "catId": "cat80e17b7972d68893349b859ae10e5233",
+      "subCategoryNameAr": "ملابس اولاد",
+      "subCategoryNameEn": "Boys Clothes",
+      "tags": [
+        { "id": "t_boys_tshirt", "ar": "تيشيرت", "en": "T-Shirt" },
+        { "id": "t_boys_pants", "ar": "بنطلون", "en": "Pants" },
+        { "id": "t_boys_sweatshirt", "ar": "سويت شيرت", "en": "Sweatshirt" },
+        { "id": "t_boys_jacket", "ar": "جاكيت", "en": "Jacket" },
+        { "id": "t_boys_pajama", "ar": "بيجاما", "en": "Pajamas" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat7cac246e21686b604251c584daddc5be",
+      "catId": "cat80e17b7972d68893349b859ae10e5233",
+      "subCategoryNameAr": "أحذية رجالي",
+      "subCategoryNameEn": "Men Shoes",
+      "tags": [
+        { "id": "t_men_sneakers", "ar": "كوتشي", "en": "Sneakers" },
+        { "id": "t_men_leather_boots", "ar": "جزمة جلد", "en": "Leather Boots" },
+        { "id": "t_men_formal", "ar": "حذاء رسمي", "en": "Formal Shoes" },
+        { "id": "t_men_sport", "ar": "حذاء رياضي", "en": "Sports Shoes" },
+        { "id": "t_men_slippers", "ar": "شبشب", "en": "Slippers" }
+      ]
+    },
+    {
+      "subCategoryId": "subcata7abc1592d01ab649ad1ba43ff2558f0",
+      "catId": "cat80e17b7972d68893349b859ae10e5233",
+      "subCategoryNameAr": "أحذية أولاد",
+      "subCategoryNameEn": "Boys Shoes",
+      "tags": [
+        { "id": "t_boys_sneakers", "ar": "كوتشي", "en": "Sneakers" },
+        { "id": "t_boys_boots", "ar": "جزمة", "en": "Boots" },
+        { "id": "t_boys_sandals", "ar": "صندل", "en": "Sandals" },
+        { "id": "t_boys_sport", "ar": "حذاء رياضي", "en": "Sports Shoes" },
+        { "id": "t_boys_slippers", "ar": "شبشب", "en": "Slippers" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatbbdcdb1d13adaba4daa3578f2d8dcc1e",
+      "catId": "cat80e17b7972d68893349b859ae10e5233",
+      "subCategoryNameAr": "ملابس رجالي",
+      "subCategoryNameEn": "Men Clothes",
+      "tags": [
+        { "id": "t_men_tshirt", "ar": "تيشيرت", "en": "T-Shirt" },
+        { "id": "t_men_shirt", "ar": "قميص", "en": "Shirt" },
+        { "id": "t_men_pants", "ar": "بنطلون", "en": "Pants" },
+        { "id": "t_men_jacket", "ar": "جاكيت", "en": "Jacket" },
+        { "id": "t_men_suit", "ar": "بدلة", "en": "Suit" }
+      ]
+    },
+
+    {
+      "subCategoryId": "subcat00bd31dd233c2a35653af48d21a9b949",
+      "catId": "cat8a7c4e95f50c7c58900db2d9c2164908",
+      "subCategoryNameAr": "روايات وقصص",
+      "subCategoryNameEn": "Novels & Stories",
+      "tags": [
+        { "id": "t_books_novel", "ar": "روايات", "en": "Novels" },
+        { "id": "t_books_shortstories", "ar": "قصص قصيرة", "en": "Short Stories" },
+        { "id": "t_books_classics", "ar": "كلاسيكيات", "en": "Classics" },
+        { "id": "t_books_arabic_lit", "ar": "أدب عربي", "en": "Arabic Literature" },
+        { "id": "t_books_translated", "ar": "مترجمة", "en": "Translated" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat2137577f377374f5219f42aff4a2919d",
+      "catId": "cat8a7c4e95f50c7c58900db2d9c2164908",
+      "subCategoryNameAr": "الفنون والعمارة",
+      "subCategoryNameEn": "Arts & Architecture",
+      "tags": [
+        { "id": "t_arts_drawing", "ar": "رسم", "en": "Drawing" },
+        { "id": "t_arts_painting", "ar": "تصوير/ألوان", "en": "Painting" },
+        { "id": "t_arts_architecture", "ar": "عمارة", "en": "Architecture" },
+        { "id": "t_arts_design", "ar": "تصميم", "en": "Design" },
+        { "id": "t_arts_photography", "ar": "تصوير فوتوغرافي", "en": "Photography" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat45e6e5f29d7b8ae16cb14085896ebec4",
+      "catId": "cat8a7c4e95f50c7c58900db2d9c2164908",
+      "subCategoryNameAr": "كتب أطفال",
+      "subCategoryNameEn": "Children Books",
+      "tags": [
+        { "id": "t_kidsbooks_story", "ar": "قصص أطفال", "en": "Kids Stories" },
+        { "id": "t_kidsbooks_educational", "ar": "تعليمي", "en": "Educational" },
+        { "id": "t_kidsbooks_coloring", "ar": "تلوين", "en": "Coloring" },
+        { "id": "t_kidsbooks_earlyreading", "ar": "تعلم القراءة", "en": "Early Reading" },
+        { "id": "t_kidsbooks_activity", "ar": "أنشطة", "en": "Activity Books" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat5a3a2f707a9334995357870add0feb70",
+      "catId": "cat8a7c4e95f50c7c58900db2d9c2164908",
+      "subCategoryNameAr": "كتب اسلامية",
+      "subCategoryNameEn": "Islamic Books",
+      "tags": [
+        { "id": "t_islam_quran", "ar": "قرآن وتفسير", "en": "Quran & Tafsir" },
+        { "id": "t_islam_hadith", "ar": "حديث", "en": "Hadith" },
+        { "id": "t_islam_fiqh", "ar": "فقه", "en": "Fiqh" },
+        { "id": "t_islam_seerah", "ar": "سيرة", "en": "Seerah" },
+        { "id": "t_islam_dua", "ar": "أدعية وأذكار", "en": "Dua & Azkar" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat8744d39887aa6934dc61b1e99f7a4258",
+      "catId": "cat8a7c4e95f50c7c58900db2d9c2164908",
+      "subCategoryNameAr": "تطوير الذات والتربية",
+      "subCategoryNameEn": "Self Development & Parenting",
+      "tags": [
+        { "id": "t_self_habits", "ar": "عادات", "en": "Habits" },
+        { "id": "t_self_productivity", "ar": "إنتاجية", "en": "Productivity" },
+        { "id": "t_self_parenting", "ar": "تربية", "en": "Parenting" },
+        { "id": "t_self_psychology", "ar": "علم نفس", "en": "Psychology" },
+        { "id": "t_self_relationships", "ar": "علاقات", "en": "Relationships" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat8f522dc5a83514fc5897c6af145bce57",
+      "catId": "cat8a7c4e95f50c7c58900db2d9c2164908",
+      "subCategoryNameAr": "لغات",
+      "subCategoryNameEn": "Languages",
+      "tags": [
+        { "id": "t_lang_english", "ar": "إنجليزي", "en": "English" },
+        { "id": "t_lang_french", "ar": "فرنساوي", "en": "French" },
+        { "id": "t_lang_german", "ar": "ألماني", "en": "German" },
+        { "id": "t_lang_arabic", "ar": "عربي", "en": "Arabic" },
+        { "id": "t_lang_dictionary", "ar": "قاموس", "en": "Dictionary" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatba71395eb93a3def03b161324ca2b794",
+      "catId": "cat8a7c4e95f50c7c58900db2d9c2164908",
+      "subCategoryNameAr": "الكومبيوتر والتكنولوجيا",
+      "subCategoryNameEn": "Computers & Technology",
+      "tags": [
+        { "id": "t_tech_programming", "ar": "برمجة", "en": "Programming" },
+        { "id": "t_tech_networks", "ar": "شبكات", "en": "Networking" },
+        { "id": "t_tech_security", "ar": "أمن سيبراني", "en": "Cybersecurity" },
+        { "id": "t_tech_ai", "ar": "ذكاء اصطناعي", "en": "AI" },
+        { "id": "t_tech_hardware", "ar": "هاردوير", "en": "Hardware" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatf38cf428dca2854d2b6e7d3173fa166c",
+      "catId": "cat8a7c4e95f50c7c58900db2d9c2164908",
+      "subCategoryNameAr": "العلوم",
+      "subCategoryNameEn": "Science",
+      "tags": [
+        { "id": "t_science_physics", "ar": "فيزياء", "en": "Physics" },
+        { "id": "t_science_chemistry", "ar": "كيمياء", "en": "Chemistry" },
+        { "id": "t_science_biology", "ar": "أحياء", "en": "Biology" },
+        { "id": "t_science_space", "ar": "فضاء", "en": "Space" },
+        { "id": "t_science_experiments", "ar": "تجارب", "en": "Experiments" }
+      ]
+    },
+
+    {
+      "subCategoryId": "subcat08867d60d4f15ddf1420cc369b4e7c33",
+      "catId": "catba9b631e751570e9d08c70e28310c8f9",
+      "subCategoryNameAr": "ألعاب ذكاء وألغاز",
+      "subCategoryNameEn": "Brain Games & Puzzles",
+      "tags": [
+        { "id": "t_brain_rubik", "ar": "مكعب روبيك", "en": "Rubik's Cube" },
+        { "id": "t_brain_puzzle", "ar": "ألغاز", "en": "Puzzles" },
+        { "id": "t_brain_logic", "ar": "منطق", "en": "Logic" },
+        { "id": "t_brain_mind", "ar": "تحديات عقلية", "en": "Mind Challenges" },
+        { "id": "t_brain_escape", "ar": "إسكيب روم", "en": "Escape Games" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat195d1866eda5f0ddbcfbce42400d1a24",
+      "catId": "catba9b631e751570e9d08c70e28310c8f9",
+      "subCategoryNameAr": "ألعاب أطفال",
+      "subCategoryNameEn": "Kids Toys",
+      "tags": [
+        { "id": "t_kidstoys_dolls", "ar": "عرائس", "en": "Dolls" },
+        { "id": "t_kidstoys_cars", "ar": "عربيات", "en": "Toy Cars" },
+        { "id": "t_kidstoys_plush", "ar": "دُمى قطن", "en": "Plush" },
+        { "id": "t_kidstoys_blocks", "ar": "مكعبات", "en": "Blocks" },
+        { "id": "t_kidstoys_baby", "ar": "للرضّع", "en": "Baby Toys" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat5fd0dc608a3fe259385450b1c8ca3e32",
+      "catId": "catba9b631e751570e9d08c70e28310c8f9",
+      "subCategoryNameAr": "ألعاب خارجية",
+      "subCategoryNameEn": "Outdoor Toys",
+      "tags": [
+        { "id": "t_outdoor_bike", "ar": "عجلة", "en": "Bicycle" },
+        { "id": "t_outdoor_skate", "ar": "اسكيت", "en": "Skate" },
+        { "id": "t_outdoor_ball", "ar": "كرات", "en": "Balls" },
+        { "id": "t_outdoor_tent", "ar": "خيمة لعب", "en": "Play Tent" },
+        { "id": "t_outdoor_water", "ar": "ألعاب مياه", "en": "Water Toys" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat6f2b1c5eb2ced126db2b434f5ea9b5ac",
+      "catId": "catba9b631e751570e9d08c70e28310c8f9",
+      "subCategoryNameAr": "العاب ورقية",
+      "subCategoryNameEn": "Card & Paper Games",
+      "tags": [
+        { "id": "t_cards_uno", "ar": "أونو", "en": "UNO" },
+        { "id": "t_cards_board", "ar": "ألعاب جماعية", "en": "Party Games" },
+        { "id": "t_cards_trading", "ar": "كروت تجميع", "en": "Trading Cards" },
+        { "id": "t_cards_magic", "ar": "خفة يد", "en": "Magic Cards" },
+        { "id": "t_cards_learning", "ar": "تعليمي", "en": "Learning Cards" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat839b4cccfad45472d9ed5e875cd0ce80",
+      "catId": "catba9b631e751570e9d08c70e28310c8f9",
+      "subCategoryNameAr": "ليجو وبازل",
+      "subCategoryNameEn": "LEGO & Puzzles",
+      "tags": [
+        { "id": "t_lego_sets", "ar": "مجموعات ليجو", "en": "LEGO Sets" },
+        { "id": "t_lego_parts", "ar": "قطع ليجو", "en": "LEGO Parts" },
+        { "id": "t_puzzle_jigsaw", "ar": "بازل", "en": "Jigsaw Puzzle" },
+        { "id": "t_lego_technic", "ar": "تكنيك", "en": "Technic" },
+        { "id": "t_lego_education", "ar": "تعليمي", "en": "Educational" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatb10d4dc6c85fd5e545caeec6f012aec8",
+      "catId": "catba9b631e751570e9d08c70e28310c8f9",
+      "subCategoryNameAr": "العاب تعليمية",
+      "subCategoryNameEn": "Educational Toys",
+      "tags": [
+        { "id": "t_edu_stem", "ar": "STEM", "en": "STEM" },
+        { "id": "t_edu_math", "ar": "رياضيات", "en": "Math" },
+        { "id": "t_edu_science", "ar": "علوم", "en": "Science" },
+        { "id": "t_edu_reading", "ar": "قراءة", "en": "Reading" },
+        { "id": "t_edu_montessori", "ar": "مونتيسوري", "en": "Montessori" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatd8507572032188a83f948b18dd4d6940",
+      "catId": "catba9b631e751570e9d08c70e28310c8f9",
+      "subCategoryNameAr": "سكوتر – عجلة أطفال",
+      "subCategoryNameEn": "Scooter & Kids Bike",
+      "tags": [
+        { "id": "t_ride_scooter", "ar": "سكوتر", "en": "Scooter" },
+        { "id": "t_ride_bike", "ar": "عجلة أطفال", "en": "Kids Bike" },
+        { "id": "t_ride_helmet", "ar": "خوذة", "en": "Helmet" },
+        { "id": "t_ride_protection", "ar": "حماية", "en": "Protective Gear" },
+        { "id": "t_ride_spareparts", "ar": "قطع غيار", "en": "Spare Parts" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatef06e7dd05f0a63275fe6c4f8953e777",
+      "catId": "catba9b631e751570e9d08c70e28310c8f9",
+      "subCategoryNameAr": "ألعاب إلكترونية (بلايستيشن – VR)",
+      "subCategoryNameEn": "Electronic Games (PlayStation & VR)",
+      "tags": [
+        { "id": "t_game_console", "ar": "كونسول", "en": "Console" },
+        { "id": "t_game_vr", "ar": "VR", "en": "VR" },
+        { "id": "t_game_controller", "ar": "يد تحكم", "en": "Controller" },
+        { "id": "t_game_games", "ar": "ألعاب", "en": "Games" },
+        { "id": "t_game_headset", "ar": "سماعة", "en": "Headset" }
+      ]
+    },
+
+    {
+      "subCategoryId": "subcat084bd05304c4a074b3d3428003ed426e",
+      "catId": "catbf4a26b5917c69a463815ed15a446caa",
+      "subCategoryNameAr": "أجهزة ذكية",
+      "subCategoryNameEn": "Smart Devices",
+      "tags": [
+        { "id": "t_smart_watch", "ar": "ساعة ذكية", "en": "Smartwatch" },
+        { "id": "t_smart_speaker", "ar": "سماعة ذكية", "en": "Smart Speaker" },
+        { "id": "t_smart_home", "ar": "منزل ذكي", "en": "Smart Home" },
+        { "id": "t_smart_tracker", "ar": "تراكر", "en": "Tracker" },
+        { "id": "t_smart_router", "ar": "راوتر/واي فاي", "en": "Router/Wi-Fi" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat252b533ccff07df3e61f6bee80684fe4",
+      "catId": "catbf4a26b5917c69a463815ed15a446caa",
+      "subCategoryNameAr": "موبايلات وتابلت",
+      "subCategoryNameEn": "Mobiles & Tablets",
+      "tags": [
+        { "id": "t_mobile_phone", "ar": "موبايل", "en": "Phone" },
+        { "id": "t_mobile_tablet", "ar": "تابلت", "en": "Tablet" },
+        { "id": "t_mobile_accessories", "ar": "إكسسوارات", "en": "Accessories" },
+        { "id": "t_mobile_screen", "ar": "شاشة/حماية", "en": "Screen/Protector" },
+        { "id": "t_mobile_charger", "ar": "شاحن", "en": "Charger" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat9f997f7248ed96a1269280f267ffe485",
+      "catId": "catbf4a26b5917c69a463815ed15a446caa",
+      "subCategoryNameAr": "شرائح اتصال",
+      "subCategoryNameEn": "SIM Cards",
+      "tags": [
+        { "id": "t_sim_prepaid", "ar": "خط مسبق الدفع", "en": "Prepaid" },
+        { "id": "t_sim_postpaid", "ar": "فاتورة", "en": "Postpaid" },
+        { "id": "t_sim_data", "ar": "داتا", "en": "Data" },
+        { "id": "t_sim_esim", "ar": "eSIM", "en": "eSIM" },
+        { "id": "t_sim_package", "ar": "باقة", "en": "Bundle" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatd8a5aee3497b248c8fb8f80a8eb76caa",
+      "catId": "catbf4a26b5917c69a463815ed15a446caa",
+      "subCategoryNameAr": "كاميرات",
+      "subCategoryNameEn": "Cameras",
+      "tags": [
+        { "id": "t_cam_dslr", "ar": "DSLR", "en": "DSLR" },
+        { "id": "t_cam_mirrorless", "ar": "Mirrorless", "en": "Mirrorless" },
+        { "id": "t_cam_action", "ar": "أكشن كام", "en": "Action Cam" },
+        { "id": "t_cam_lens", "ar": "عدسات", "en": "Lenses" },
+        { "id": "t_cam_tripod", "ar": "ترايبود", "en": "Tripod" }
+      ]
+    },
+    {
+      "subCategoryId": "subcate2ce20c9815d1dbba67b3b24c3178920",
+      "catId": "catbf4a26b5917c69a463815ed15a446caa",
+      "subCategoryNameAr": "إكسسوارات إلكترونية",
+      "subCategoryNameEn": "Electronic Accessories",
+      "tags": [
+        { "id": "t_eacc_powerbank", "ar": "باور بانك", "en": "Power Bank" },
+        { "id": "t_eacc_cables", "ar": "كابلات", "en": "Cables" },
+        { "id": "t_eacc_headphones", "ar": "سماعات", "en": "Headphones" },
+        { "id": "t_eacc_mouse", "ar": "ماوس", "en": "Mouse" },
+        { "id": "t_eacc_keyboard", "ar": "كيبورد", "en": "Keyboard" }
+      ]
+    },
+    {
+      "subCategoryId": "subcate5b954d728e13dfb960ab27290a56862",
+      "catId": "catbf4a26b5917c69a463815ed15a446caa",
+      "subCategoryNameAr": "لاب توب-اكسسوارات",
+      "subCategoryNameEn": "Laptop & Accessories",
+      "tags": [
+        { "id": "t_laptop_device", "ar": "لاب توب", "en": "Laptop" },
+        { "id": "t_laptop_bag", "ar": "شنطة لاب", "en": "Laptop Bag" },
+        { "id": "t_laptop_charger", "ar": "شاحن", "en": "Charger" },
+        { "id": "t_laptop_ram", "ar": "رام/ترقية", "en": "RAM/Upgrade" },
+        { "id": "t_laptop_ssd", "ar": "SSD/هارد", "en": "SSD/Storage" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatf1de193c46eb61094a7b9c939cb5885d",
+      "catId": "catbf4a26b5917c69a463815ed15a446caa",
+      "subCategoryNameAr": "أجهزة (كمبيوتر – شاشات)",
+      "subCategoryNameEn": "Computers & Monitors",
+      "tags": [
+        { "id": "t_pc_desktop", "ar": "كمبيوتر مكتبي", "en": "Desktop PC" },
+        { "id": "t_pc_monitor", "ar": "شاشة", "en": "Monitor" },
+        { "id": "t_pc_parts", "ar": "قطع كمبيوتر", "en": "PC Parts" },
+        { "id": "t_pc_gpu", "ar": "كارت شاشة", "en": "GPU" },
+        { "id": "t_pc_printer", "ar": "طابعة", "en": "Printer" }
+      ]
+    },
+
+    {
+      "subCategoryId": "subcat36dc84b0d48aac87192bac37cf6eac80",
+      "catId": "catd42af6870276ecf5ed351588d1d8a78c",
+      "subCategoryNameAr": "اشغال يدوية",
+      "subCategoryNameEn": "Handmade Crafts",
+      "tags": [
+        { "id": "t_craft_handmade", "ar": "هاند ميد", "en": "Handmade" },
+        { "id": "t_craft_beads", "ar": "خرز", "en": "Beads" },
+        { "id": "t_craft_resin", "ar": "ريزن", "en": "Resin" },
+        { "id": "t_craft_wood", "ar": "خشب", "en": "Wood" },
+        { "id": "t_craft_tools", "ar": "أدوات أشغال", "en": "Craft Tools" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat584e66292ef93e3aa931c1ddec854698",
+      "catId": "catd42af6870276ecf5ed351588d1d8a78c",
+      "subCategoryNameAr": "الصيد",
+      "subCategoryNameEn": "Fishing",
+      "tags": [
+        { "id": "t_fish_rod", "ar": "سنارة", "en": "Rod" },
+        { "id": "t_fish_reel", "ar": "ماكينة", "en": "Reel" },
+        { "id": "t_fish_hooks", "ar": "سنون/خطاطيف", "en": "Hooks" },
+        { "id": "t_fish_lures", "ar": "طُعم صناعي", "en": "Lures" },
+        { "id": "t_fish_box", "ar": "شنطة/علبة عدة", "en": "Tackle Box" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat6c945598ed521bb2dab1ff0b7d7c9a17",
+      "catId": "catd42af6870276ecf5ed351588d1d8a78c",
+      "subCategoryNameAr": "ادوات طبية",
+      "subCategoryNameEn": "Medical Tools",
+      "tags": [
+        { "id": "t_med_bp", "ar": "جهاز ضغط", "en": "Blood Pressure" },
+        { "id": "t_med_glucose", "ar": "سكر", "en": "Glucose Meter" },
+        { "id": "t_med_thermometer", "ar": "ترمومتر", "en": "Thermometer" },
+        { "id": "t_med_nebulizer", "ar": "نيبولايزر", "en": "Nebulizer" },
+        { "id": "t_med_firstaid", "ar": "إسعافات أولية", "en": "First Aid" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat72c2c23387706cb405e6689652b1edda",
+      "catId": "catd42af6870276ecf5ed351588d1d8a78c",
+      "subCategoryNameAr": "السيارات",
+      "subCategoryNameEn": "Cars",
+      "tags": [
+        { "id": "t_car_accessories", "ar": "إكسسوارات", "en": "Accessories" },
+        { "id": "t_car_audio", "ar": "صوتيات", "en": "Audio" },
+        { "id": "t_car_lights", "ar": "إضاءة", "en": "Lights" },
+        { "id": "t_car_care", "ar": "عناية بالسيارة", "en": "Car Care" },
+        { "id": "t_car_parts", "ar": "قطع غيار", "en": "Spare Parts" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat83b978883ba06a7f54b4705d08bf8c2e",
+      "catId": "catd42af6870276ecf5ed351588d1d8a78c",
+      "subCategoryNameAr": "هندسة",
+      "subCategoryNameEn": "Engineering",
+      "tags": [
+        { "id": "t_eng_tools", "ar": "أدوات", "en": "Tools" },
+        { "id": "t_eng_measure", "ar": "قياس", "en": "Measuring" },
+        { "id": "t_eng_electrical", "ar": "كهرباء", "en": "Electrical" },
+        { "id": "t_eng_mechanical", "ar": "ميكانيكا", "en": "Mechanical" },
+        { "id": "t_eng_projects", "ar": "مشاريع", "en": "Projects" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat89ac8bd6eaec579b99b5d1bb6e4db3f6",
+      "catId": "catd42af6870276ecf5ed351588d1d8a78c",
+      "subCategoryNameAr": "أدوات فنية",
+      "subCategoryNameEn": "Art Tools",
+      "tags": [
+        { "id": "t_art_pens", "ar": "أقلام رسم", "en": "Drawing Pens" },
+        { "id": "t_art_colors", "ar": "ألوان", "en": "Colors" },
+        { "id": "t_art_canvas", "ar": "كانفاس", "en": "Canvas" },
+        { "id": "t_art_brushes", "ar": "فرش", "en": "Brushes" },
+        { "id": "t_art_sketchbook", "ar": "اسكتش/دفتر رسم", "en": "Sketchbook" }
+      ]
+    },
+    {
+      "subCategoryId": "subcata942324d2bafdde9ce65ed2037ccf745",
+      "catId": "catd42af6870276ecf5ed351588d1d8a78c",
+      "subCategoryNameAr": "خياطة وتطريز",
+      "subCategoryNameEn": "Sewing & Embroidery",
+      "tags": [
+        { "id": "t_sew_machine", "ar": "ماكينة خياطة", "en": "Sewing Machine" },
+        { "id": "t_sew_threads", "ar": "خيوط", "en": "Threads" },
+        { "id": "t_sew_needles", "ar": "إبر", "en": "Needles" },
+        { "id": "t_sew_fabric", "ar": "أقمشة", "en": "Fabric" },
+        { "id": "t_sew_embroidery", "ar": "تطريز", "en": "Embroidery" }
+      ]
+    },
+
+    {
+      "subCategoryId": "subcat06f0275f634b5a55a60c51973d9e2d01",
+      "catId": "catfcf4c552b145622d06c74d98dbd4d4de",
+      "subCategoryNameAr": "العناية بالمنزل",
+      "subCategoryNameEn": "Home Care",
+      "tags": [
+        { "id": "t_home_cleaning", "ar": "تنظيف", "en": "Cleaning" },
+        { "id": "t_home_storage", "ar": "تنظيم/تخزين", "en": "Storage" },
+        { "id": "t_home_tools", "ar": "أدوات منزل", "en": "Home Tools" },
+        { "id": "t_home_laundry", "ar": "غسيل", "en": "Laundry" },
+        { "id": "t_home_airfresh", "ar": "معطرات", "en": "Air Fresheners" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat1fd805ccd447cd1a6661ea8d80efe4ce",
+      "catId": "catfcf4c552b145622d06c74d98dbd4d4de",
+      "subCategoryNameAr": "شنط سفر",
+      "subCategoryNameEn": "Travel Bags",
+      "tags": [
+        { "id": "t_travel_suitcase", "ar": "شنطة سفر", "en": "Suitcase" },
+        { "id": "t_travel_backpack", "ar": "شنطة ظهر", "en": "Backpack" },
+        { "id": "t_travel_carryon", "ar": "حقيبة يد", "en": "Carry-on" },
+        { "id": "t_travel_organizers", "ar": "منظمات شنط", "en": "Organizers" },
+        { "id": "t_travel_access", "ar": "إكسسوارات سفر", "en": "Travel Accessories" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat5b26d58adba5d71bde0ea9fd54b76532",
+      "catId": "catfcf4c552b145622d06c74d98dbd4d4de",
+      "subCategoryNameAr": "المطبخ والمائدة",
+      "subCategoryNameEn": "Kitchen & Dining",
+      "tags": [
+        { "id": "t_kitchen_cookware", "ar": "حِلَل/طاسات", "en": "Cookware" },
+        { "id": "t_kitchen_dishes", "ar": "أطباق", "en": "Dishes" },
+        { "id": "t_kitchen_cutlery", "ar": "ملاعق وشوك", "en": "Cutlery" },
+        { "id": "t_kitchen_appliances", "ar": "أجهزة مطبخ", "en": "Kitchen Appliances" },
+        { "id": "t_kitchen_storage", "ar": "حفظ وتخزين", "en": "Food Storage" }
+      ]
+    },
+    {
+      "subCategoryId": "subcat985fb93b9fca11d291706dd9519fe473",
+      "catId": "catfcf4c552b145622d06c74d98dbd4d4de",
+      "subCategoryNameAr": "ديكور المنزل",
+      "subCategoryNameEn": "Home Decor",
+      "tags": [
+        { "id": "t_decor_frames", "ar": "براويز", "en": "Frames" },
+        { "id": "t_decor_lighting", "ar": "إضاءة", "en": "Lighting" },
+        { "id": "t_decor_rugs", "ar": "سجاد", "en": "Rugs" },
+        { "id": "t_decor_plants", "ar": "نباتات/زينة", "en": "Plants/Decor" },
+        { "id": "t_decor_wall", "ar": "ديكور حائط", "en": "Wall Decor" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatfb7e6413fa51e3bc5b67bd98c2322901",
+      "catId": "catfcf4c552b145622d06c74d98dbd4d4de",
+      "subCategoryNameAr": "اجهزة منزلية",
+      "subCategoryNameEn": "Home Appliances",
+      "tags": [
+        { "id": "t_appl_washer", "ar": "غسالة", "en": "Washing Machine" },
+        { "id": "t_appl_fridge", "ar": "ثلاجة", "en": "Fridge" },
+        { "id": "t_appl_microwave", "ar": "ميكروويف", "en": "Microwave" },
+        { "id": "t_appl_vacuum", "ar": "مكنسة", "en": "Vacuum" },
+        { "id": "t_appl_aircondition", "ar": "تكييف", "en": "Air Conditioner" }
+      ]
+    },
+    {
+      "subCategoryId": "subcatfbe2e162e7f5b25cce12916e43c6ff54",
+      "catId": "catfcf4c552b145622d06c74d98dbd4d4de",
+      "subCategoryNameAr": "مفروشات",
+      "subCategoryNameEn": "Furnishings",
+      "tags": [
+        { "id": "t_furn_bedding", "ar": "ملايات/مفارش", "en": "Bedding" },
+        { "id": "t_furn_curtains", "ar": "ستائر", "en": "Curtains" },
+        { "id": "t_furn_pillows", "ar": "مخدات", "en": "Pillows" },
+        { "id": "t_furn_blankets", "ar": "بطاطين", "en": "Blankets" },
+        { "id": "t_furn_towels", "ar": "فوط", "en": "Towels" }
+      ]
+    }
+  ]
+}

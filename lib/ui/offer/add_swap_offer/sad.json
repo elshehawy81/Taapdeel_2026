@@ -1,0 +1,23 @@
+{
+  item_id: itm_1ac55aa9039c3ea1ef03b819f29c3ae9,
+  buyer_user_id: usre9e65554d2d8d2ca1992ece9c7cfc73b,
+  seller_user_id: usr60b71efff44483ec8d6c2a9ee870d4e9,
+  buyer_item_id: itm_79d1dd0d1cd75a9106e981eac1477256,
+  nego_price: 0,
+  type: to_seller,
+  is_user_online: 1,
+  message:
+}
+
+
+{
+  item_id: itm_1ac55aa9039c3ea1ef03b819f29c3ae9,
+  buyer_user_id: usre9e65554d2d8d2ca1992ece9c7cfc73b,
+  seller_user_id: usr60b71efff44483ec8d6c2a9ee870d4e9,
+  buyer_item_id: itm_79d1dd0d1cd75a9106e981eac1477256,
+  nego_price: 0,
+  type: to_seller,
+  is_user_online: 1,
+  message: ,
+  id: chat_878d725e40ff52d18b8e78ac189d1619
+}
