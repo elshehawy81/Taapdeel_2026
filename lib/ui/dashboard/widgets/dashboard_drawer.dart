@@ -172,43 +172,6 @@ class DashboardDrawer extends StatelessWidget {
                   _AdminPendingProductsMenuGate(
                     adminUserId: provider.psValueHolder?.loginUserId ?? '',
                   ),
-                  _LogoutTile(
-                    onTap: () async {
-                      final BuildContext rootContext =
-                          Navigator.of(context, rootNavigator: true).context;
-
-                      final String description = Utils.getString(
-                        context,
-                        'home__logout_dialog_description',
-                      );
-                      final String cancelText = Utils.getString(
-                        context,
-                        'home__logout_dialog_cancel_button',
-                      );
-                      final String okText = Utils.getString(
-                        context,
-                        'home__logout_dialog_ok_button',
-                      );
-
-                      Navigator.pop(context);
-
-                      await Future<void>.delayed(Duration.zero);
-
-                      showDialog<dynamic>(
-                        context: rootContext,
-                        builder: (BuildContext dialogContext) => ConfirmDialogView(
-                          description:     description,
-                          leftButtonText:  cancelText,
-                          rightButtonText: okText,
-                          onAgreeTap: () async {
-                            Navigator.pop(dialogContext);
-                            await _doLogout(rootContext, provider, deleteTaskProvider);
-                          },
-                        ),
-                      );
-                    },
-                    title: Utils.getString(context, 'home__menu_drawer_logout'),
-                  ),
                 ],
                 const _Divider(),
 
@@ -235,12 +198,15 @@ class DashboardDrawer extends StatelessWidget {
                   },
                 ),
                 _DrawerMenuWidget(
-                  icon:   FontAwesome.question_circle_o,
+                  icon: FontAwesome.question_circle_o,
                   iconBg: _DC.bgAmber,
                   iconFg: _DC.fgAmber,
-                  title:  Utils.getString(context, 'setting__faq'),
-                  index:  PsConst.REQUEST_CODE__MENU_FAQ_PAGES_FRAGMENT,
-                  onTap:  (t, i) { Navigator.pop(context); onSelectIndex(t, i); },
+                  title: Utils.getString(context, 'setting__faq'),
+                  index: PsConst.REQUEST_CODE__MENU_FAQ_PAGES_FRAGMENT,
+                  onTap: (t, i) {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, RoutePaths.faq);
+                  },
                 ),
                 _DrawerMenuWidget(
                   icon:   Icons.headset_mic_outlined,
@@ -272,70 +238,7 @@ class DashboardDrawer extends StatelessWidget {
     );
   }
 
-  Future<void> _doLogout(
-      BuildContext context,
-      UserProvider provider,
-      DeleteTaskProvider? deleteTaskProvider,
-      ) async {
-    bool dialogShown = false;
 
-    try {
-      await PsProgressDialog.showDialog(context);
-      dialogShown = true;
-
-      final String loginUserId = provider.psValueHolder?.loginUserId ?? '';
-      if (loginUserId.isNotEmpty) {
-        final UserLogoutHolder holder = UserLogoutHolder(userId: loginUserId);
-        await provider.userLogout(holder.toMap());
-      }
-    } catch (_) {
-      // حتى لو API logout فشل، لازم نمسح الجلسة محليًا حتى لا يظل المستخدم logged in.
-    } finally {
-      if (dialogShown) {
-        PsProgressDialog.dismissDialog();
-      }
-
-      await _clearSession(provider, deleteTaskProvider);
-
-      final bool forceLogin = provider.psValueHolder?.isForceLogin == true;
-
-      // مهم جدًا:
-      // onLogoutSuccess في DashboardView يعمل setState.
-      // لذلك لازم يتنفذ قبل أي تنقل؛ لأن التنقل بـ removeUntil
-      // يزيل HomeView من الشجرة، وبعدها أي setState داخله يسبب صفحة بيضاء / crash.
-      onLogoutSuccess();
-
-      if (!context.mounted) {
-        return;
-      }
-
-      if (forceLogin) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          RoutePaths.login_container,
-              (_) => false,
-        );
-        return;
-      }
-
-      // لو التطبيق يسمح بالتصفح كزائر، رجّع المستخدم للصفحة الرئيسية بعد تسجيل الخروج.
-      onSelectIndex(
-        Utils.getString(context, 'home__drawer_menu_home'),
-        PsConst.REQUEST_CODE__MENU_HOME_FRAGMENT,
-      );
-    }
-  }
-
-  Future<void> _clearSession(
-      UserProvider provider,
-      DeleteTaskProvider? deleteTaskProvider,
-      ) async {
-    await provider.replaceLoginUserId('');
-    await provider.replaceLoginUserName('');
-    await deleteTaskProvider?.deleteTask();
-    await GoogleSignIn().signOut();
-    await fb_auth.FirebaseAuth.instance.signOut();
-  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -605,7 +508,7 @@ class _DrawerMenuWidget extends StatelessWidget {
         ),
       ),
       trailing: Icon(
-        Icons.chevron_left,
+        Icons.chevron_right,
         size: 18,
         color: Colors.grey.shade400,
       ),
@@ -826,7 +729,7 @@ class _ShareTile extends StatelessWidget {
           color: _DC.itemText,
         ),
       ),
-      trailing: Icon(Icons.chevron_left, size: 18, color: Colors.grey.shade400),
+      trailing: Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
       onTap: onTap,
     );
   }
@@ -862,7 +765,7 @@ class _RateTile extends StatelessWidget {
           color: _DC.itemText,
         ),
       ),
-      trailing: Icon(Icons.chevron_left, size: 18, color: Colors.grey.shade400),
+      trailing: Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
       onTap: () {
         onTap();
         if (Platform.isIOS) {

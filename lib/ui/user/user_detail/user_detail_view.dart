@@ -89,6 +89,10 @@ class _UserDetailViewState extends State<UserDetailView>
   // ✅ cache counts (stable while loading)
   int _familyCountCache = 0;
 
+  // ✅ Keep a stable provider instance so initState scroll listeners do not
+  // read from a BuildContext that is above MultiProvider.
+  ProfileFamilyItemsProvider? _familyItemsProvider;
+
   @override
   void initState() {
     super.initState();
@@ -111,22 +115,29 @@ class _UserDetailViewState extends State<UserDetailView>
       }
     });
 
-    // ✅ (اختياري) load more for family لو provider عنده pagination
+    // ✅ (اختياري) load more for family لو provider عنده pagination.
+    // Important: do not use context.read<ProfileFamilyItemsProvider>() here.
+    // State.context is above the MultiProvider created in build(), so it can
+    // crash with: Provider<ProfileFamilyItemsProvider> not found.
     _familyScrollController.addListener(() {
       if (!_familyScrollController.hasClients) return;
-      if (_familyScrollController.position.pixels >=
+      if (_familyScrollController.position.pixels <
           _familyScrollController.position.maxScrollExtent - 200) {
-        final famP = context.read<ProfileFamilyItemsProvider>();
-        final st = famP.itemList.status;
-        final isLoading = st == PsStatus.BLOCK_LOADING ||
-            st == PsStatus.PROGRESS_LOADING ||
-            st == PsStatus.LOADING;
+        return;
+      }
 
-        if (!isLoading && famP.hasMore) {
-          final String profileId = (widget.userId ?? '');
-          if (profileId.isEmpty) return;
-          famP.nextFamilyItems(null, profileId);
-        }
+      final ProfileFamilyItemsProvider? famP = _familyItemsProvider;
+      if (famP == null) return;
+
+      final st = famP.itemList.status;
+      final bool isLoading = st == PsStatus.BLOCK_LOADING ||
+          st == PsStatus.PROGRESS_LOADING ||
+          st == PsStatus.LOADING;
+
+      if (!isLoading && famP.hasMore) {
+        final String profileId = (widget.userId ?? '');
+        if (profileId.isEmpty) return;
+        famP.nextFamilyItems(null, profileId);
       }
     });
   }
@@ -138,6 +149,7 @@ class _UserDetailViewState extends State<UserDetailView>
     _familyScrollController.dispose();
     _mainScrollController.dispose();
     animationController?.dispose();
+    _familyItemsProvider?.dispose();
     super.dispose();
   }
 
@@ -292,7 +304,7 @@ class _UserDetailViewState extends State<UserDetailView>
       onRefresh: () async {
         final String profileId = (widget.userId ?? '');
         if (profileId.isEmpty) return;
-        await context.read<ProfileFamilyItemsProvider>().loadFamilyItems(
+        await famP.loadFamilyItems(
           null,
           profileId,
         );
@@ -351,6 +363,12 @@ class _UserDetailViewState extends State<UserDetailView>
     userRepository = Provider.of<UserRepository>(context);
     itemRepository = Provider.of<ProductRepository>(context);
     psValueHolder = Provider.of<PsValueHolder>(context);
+
+    _familyItemsProvider ??= ProfileFamilyItemsProvider(
+      repo: itemRepository!,
+      psValueHolder: psValueHolder!,
+      limit: psValueHolder!.defaultLoadingLimit!,
+    );
 
     final String profileUserId = widget.userId ?? '';
 
@@ -414,17 +432,8 @@ class _UserDetailViewState extends State<UserDetailView>
                 return itemProvider;
               },
             ),
-            ChangeNotifierProvider<ProfileFamilyItemsProvider>(
-              lazy: true,
-              create: (_) {
-                debugPrint(
-                    '🟦 [USER DETAIL] FamilyProvider CREATED limit=${psValueHolder!.defaultLoadingLimit}');
-                return ProfileFamilyItemsProvider(
-                  repo: itemRepository!,
-                  psValueHolder: psValueHolder!,
-                  limit: psValueHolder!.defaultLoadingLimit!,
-                );
-              },
+            ChangeNotifierProvider<ProfileFamilyItemsProvider>.value(
+              value: _familyItemsProvider!,
             ),
           ],
           child: Builder(

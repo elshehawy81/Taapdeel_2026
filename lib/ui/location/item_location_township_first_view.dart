@@ -335,7 +335,7 @@ class _TownshipChoiceChip extends StatelessWidget {
                   color: Colors.white,
                 )
                     : Icon(
-                  Icons.chevron_left_rounded,
+                  Icons.radio_button_unchecked,
                   key: const ValueKey<String>('normal'),
                   size: 18,
                   color: Colors.black.withValues(alpha: 0.25),

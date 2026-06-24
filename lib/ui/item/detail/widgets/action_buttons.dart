@@ -15,6 +15,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:taapdeel/api/common/ps_resource.dart';
+import 'package:taapdeel/api/common/ps_status.dart';
+import 'package:taapdeel/api/ps_api_service.dart';
 import 'package:taapdeel/config/ps_colors.dart';
 import 'package:taapdeel/constant/ps_constants.dart';
 import 'package:taapdeel/constant/ps_dimens.dart';
@@ -35,6 +37,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../viewobject/message.dart';
+import '../../../../viewobject/owner_relation.dart';
 import '../../../offer/add_swap_offer/AddSwapOfferScreen.dart';
 
 class CallAndChatButtonWidget extends StatefulWidget {
@@ -63,6 +66,9 @@ class _CallAndChatButtonWidgetState extends State<CallAndChatButtonWidget>
 
   bool isLoading = false;
 
+  Future<PsResource<OwnerRelation>>? _ownerRelationFuture;
+  String _ownerRelationFutureKey = '';
+
   late final AnimationController _itemEntryAnimationController;
 
   @override
@@ -85,6 +91,292 @@ class _CallAndChatButtonWidgetState extends State<CallAndChatButtonWidget>
     return user?.userPhone != null &&
         user!.userPhone!.isNotEmpty &&
         user.isShowPhone == '1';
+  }
+
+  bool _isGuestUserId(String userId) {
+    final String id = userId.trim();
+    return id.isEmpty || id == 'nologinuser';
+  }
+
+  String _currentLoginUserId() {
+    final String direct = (widget.psValueHolder?.loginUserId ?? '').trim();
+    if (direct.isNotEmpty) return direct;
+
+    try {
+      return (Provider.of<PsValueHolder>(context, listen: false).loginUserId ?? '')
+          .trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _normalizePhoneForWhatsApp(String rawPhone) {
+    String phone = rawPhone.trim();
+    if (phone.isEmpty) return '';
+
+    const Map<String, String> arabicDigits = <String, String>{
+      '٠': '0',
+      '١': '1',
+      '٢': '2',
+      '٣': '3',
+      '٤': '4',
+      '٥': '5',
+      '٦': '6',
+      '٧': '7',
+      '٨': '8',
+      '٩': '9',
+      '۰': '0',
+      '۱': '1',
+      '۲': '2',
+      '۳': '3',
+      '۴': '4',
+      '۵': '5',
+      '۶': '6',
+      '۷': '7',
+      '۸': '8',
+      '۹': '9',
+    };
+
+    arabicDigits.forEach((String from, String to) {
+      phone = phone.replaceAll(from, to);
+    });
+
+    phone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+
+    if (phone.startsWith('+')) {
+      phone = phone.substring(1);
+    }
+
+    if (phone.startsWith('00')) {
+      phone = phone.substring(2);
+    }
+
+    // أغلب أرقام التطبيق مصرية. واتساب يحتاج كود الدولة بدل الصفر المحلي.
+    if (phone.startsWith('0') && phone.length >= 10) {
+      phone = '20${phone.substring(1)}';
+    }
+
+    return phone.replaceAll(RegExp(r'[^0-9]'), '');
+  }
+
+  bool _hasWhatsAppPhone(Product? product) {
+    final String phone = _normalizePhoneForWhatsApp(
+      product?.user?.userPhone ?? '',
+    );
+    return phone.isNotEmpty;
+  }
+
+  Future<PsResource<OwnerRelation>>? _relationFutureForProduct(Product? product) {
+    final String viewerId = _currentLoginUserId();
+    final String ownerId = (product?.addedUserId ?? '').trim();
+
+    if (_isGuestUserId(viewerId) || ownerId.isEmpty || viewerId == ownerId) {
+      _ownerRelationFutureKey = '';
+      _ownerRelationFuture = null;
+      return null;
+    }
+
+    final String nextKey = '$viewerId|$ownerId';
+    if (_ownerRelationFutureKey != nextKey) {
+      _ownerRelationFutureKey = nextKey;
+      _ownerRelationFuture = PsApiService().getOwnerRelation(
+        viewerId: viewerId,
+        ownerId: ownerId,
+      );
+    }
+
+    return _ownerRelationFuture;
+  }
+
+  String _extractRelationText(OwnerRelation rel) {
+    try {
+      final dynamic d = rel;
+      return (d.relationText ??
+          d.relation_text ??
+          d.relationTextLabel ??
+          d.relation ??
+          d.text ??
+          '')
+          .toString()
+          .trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  int _extractRelationType(OwnerRelation rel) {
+    try {
+      final int directType = rel.viewerToOwnerType ?? 0;
+      if (directType >= 1 && directType <= 6) {
+        return directType;
+      }
+
+      final String txt = _extractRelationText(rel).trim();
+
+      if (txt.contains('صديق')) return 1;
+      if (txt.contains('زوج') || txt.contains('زوجة')) return 2;
+      if (txt.contains('ابنك') ||
+          txt.contains('ابنتك') ||
+          txt.contains('بنتك')) {
+        return 3;
+      }
+      if (txt.contains('أبوك') ||
+          txt.contains('أمك') ||
+          txt.contains('والد') ||
+          txt.contains('والدتك') ||
+          txt.contains('والدك')) {
+        return 4;
+      }
+      if (txt.contains('أخ') || txt.contains('أخت')) return 5;
+      if (txt.contains('قريب')) return 6;
+
+      return 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  bool _hasOwnerRelation(OwnerRelation rel) {
+    final int relationType = _extractRelationType(rel);
+    if (relationType >= 1 && relationType <= 6) {
+      return true;
+    }
+
+    final String relationText = _extractRelationText(rel);
+    if (relationText.isEmpty) return false;
+
+    final String compactText = relationText.replaceAll(RegExp(r'\s+'), '');
+    if (compactText.contains('لاتوجد') ||
+        compactText.contains('لايوجد') ||
+        compactText.contains('بدونعلاقة') ||
+        compactText.contains('غيرمرتبط')) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool _canShowWhatsAppButton({
+    required Product? product,
+    required AsyncSnapshot<PsResource<OwnerRelation>> snapshot,
+  }) {
+    if (!_hasWhatsAppPhone(product)) return false;
+
+    final PsResource<OwnerRelation>? res = snapshot.data;
+    if (res == null || res.status != PsStatus.SUCCESS || res.data == null) {
+      return false;
+    }
+
+    return _hasOwnerRelation(res.data!);
+  }
+
+  Future<void> _handleWhatsAppPressed() async {
+    final Product? product = widget.provider.itemDetail.data;
+    if (product == null) return;
+
+    final String phone = _normalizePhoneForWhatsApp(
+      product.user?.userPhone ?? '',
+    );
+
+    if (phone.isEmpty) {
+      Fluttertoast.showToast(msg: 'رقم واتساب صاحب المنتج غير متاح');
+      return;
+    }
+
+    final String title = (product.title ?? '').trim();
+    final String link = TaapdeelShareLinks.productOrFallback(
+      productId: product.id,
+      existingLink: product.dynamicLink,
+    );
+
+    final String message = title.isEmpty
+        ? 'مرحبًا، شفت منتجك على تطبيق تبديل وحابب أتكلم معاك بخصوص التبديل.\n$link'
+        : 'مرحبًا، شفت منتجك "$title" على تطبيق تبديل وحابب أتكلم معاك بخصوص التبديل.\n$link';
+
+    final Uri whatsappAppUri = Uri.parse(
+      'whatsapp://send?phone=$phone&text=${Uri.encodeComponent(message)}',
+    );
+    final Uri whatsappWebUri = Uri.https(
+      'wa.me',
+      '/$phone',
+      <String, String>{'text': message},
+    );
+
+    try {
+      final bool openedApp = await launchUrl(
+        whatsappAppUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (openedApp) return;
+    } catch (_) {}
+
+    try {
+      final bool openedWeb = await launchUrl(
+        whatsappWebUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (openedWeb) return;
+    } catch (_) {}
+
+    Fluttertoast.showToast(msg: 'تعذر فتح واتساب على هذا الجهاز');
+  }
+
+  Widget _buildVisitorActionsRow({required bool showWhatsAppButton}) {
+    return Row(
+      children: <Widget>[
+
+        Expanded(
+          child: _MainActionButton(
+            icon: isLoading ? null : Icons.swap_horiz_rounded,
+            title: isLoading
+                ? 'جارٍ التحميل...'
+                : Utils.getString(
+              context,
+              'make_offer_dialog__make_offer_btn_name',
+            ),
+            onPressed: isLoading ? null : _handleSwapPressed,
+            isPrimary: true,
+            isLoading: isLoading,
+          ),
+        ),
+        const SizedBox(width: 10),
+        if (showWhatsAppButton) ...[
+          _SideActionButton(
+            icon: Icons.chat_bubble_outline_rounded,
+            label: 'محادثة',
+            onPressed: _handleWhatsAppPressed,
+            width: 120,
+            tooltip: 'محادثة واتساب',
+          ),
+
+        ],
+      ],
+    );
+  }
+
+  Widget _buildVisitorBottomBarContent() {
+    final Product? product = widget.provider.itemDetail.data;
+    final Future<PsResource<OwnerRelation>>? relationFuture =
+    _relationFutureForProduct(product);
+
+    if (relationFuture == null || !_hasWhatsAppPhone(product)) {
+      return _buildVisitorActionsRow(showWhatsAppButton: false);
+    }
+
+    return FutureBuilder<PsResource<OwnerRelation>>(
+      future: relationFuture,
+      builder: (
+          BuildContext context,
+          AsyncSnapshot<PsResource<OwnerRelation>> snapshot,
+          ) {
+        return _buildVisitorActionsRow(
+          showWhatsAppButton: _canShowWhatsAppButton(
+            product: product,
+            snapshot: snapshot,
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _openAddProductEntryScreen() async {
@@ -245,32 +537,7 @@ class _CallAndChatButtonWidgetState extends State<CallAndChatButtonWidget>
             return Align(
               alignment: Alignment.bottomCenter,
               child: _BottomBarShell(
-                child: Row(
-                  children: <Widget>[
-                    if (_canShowCallButton) ...[
-                      _SideActionButton(
-                        icon: Icons.call_rounded,
-                        onPressed: _handleCallPressed,
-                        isPrimary: false,
-                      ),
-                      const SizedBox(width: 10),
-                    ],
-                    Expanded(
-                      child: _MainActionButton(
-                        icon: isLoading ? null : Icons.swap_horiz_rounded,
-                        title: isLoading
-                            ? 'جارٍ التحميل...'
-                            : Utils.getString(
-                          context,
-                          'make_offer_dialog__make_offer_btn_name',
-                        ),
-                        onPressed: isLoading ? null : _handleSwapPressed,
-                        isPrimary: true,
-                        isLoading: isLoading,
-                      ),
-                    ),
-                  ],
-                ),
+                child: _buildVisitorBottomBarContent(),
               ),
             );
           },
@@ -829,28 +1096,106 @@ class _SideActionButton extends StatelessWidget {
     Key? key,
     required this.icon,
     required this.onPressed,
+    this.label = '',
     this.isPrimary = false,
+    this.width = 120,
+    this.tooltip,
   }) : super(key: key);
 
   final IconData icon;
   final VoidCallback? onPressed;
+  final String label;
   final bool isPrimary;
+  final double width;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return TaapdeelButton(
-      label: '',
-      onPressed: onPressed,
-      isPrimary: isPrimary,
-      outlined: !isPrimary,
-      isExpanded: false,
-      width: 62,
-      height: 50,
-      icon: Icon(
-        icon,
-        size: 18,
-        color: isPrimary ? Colors.white : const Color(0xFF102E5C),
+    final bool enabled = onPressed != null;
+    final String effectiveLabel = label.trim();
+
+    final Widget button = Opacity(
+      opacity: enabled ? 1 : 0.45,
+      child: SizedBox(
+        width: width,
+        height: 42,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: onPressed,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              height: 42,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: const Color(0xFFFFFFFF),
+                border: Border.all(
+                  color: const Color(0xFF22C55E),
+                  width: 1.2,
+                ),
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x1A22C55E),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Container(
+                    width: 23,
+                    height: 23,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF22C55E),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 13,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (effectiveLabel.isNotEmpty) ...<Widget>[
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        effectiveLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: const Color(0xFF166534),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 11.6,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
+    );
+
+    if (tooltip == null || tooltip!.trim().isEmpty) {
+      return button;
+    }
+
+    return Tooltip(
+      message: tooltip!,
+      child: button,
     );
   }
 }

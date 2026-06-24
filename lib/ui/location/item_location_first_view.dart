@@ -361,7 +361,7 @@ class _LocationChoiceChip extends StatelessWidget {
                   color: Colors.white,
                 )
                     : Icon(
-                  Icons.chevron_right_rounded,
+                  Icons.circle_outlined,
                   key: const ValueKey<String>('normal'),
                   size: 18,
                   color: Colors.black.withValues(alpha: 0.25),

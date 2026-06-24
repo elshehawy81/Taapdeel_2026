@@ -1,7 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+
 import 'package:taapdeel/constant/route_paths.dart';
 import 'package:taapdeel/provider/user/user_provider.dart';
 import 'package:taapdeel/repository/user_repository.dart';
@@ -9,7 +9,6 @@ import 'package:taapdeel/ui/common/taapdeel/taapdeel_button.dart';
 import 'package:taapdeel/ui/common/taapdeel/taapdeel_scaffold.dart';
 import 'package:taapdeel/utils/utils.dart';
 import 'package:taapdeel/viewobject/common/ps_value_holder.dart';
-import 'package:provider/provider.dart';
 
 import 'widgets/intro_dots.dart';
 import 'widgets/slide1_persona.dart';
@@ -30,9 +29,9 @@ class IntroSliderView extends StatefulWidget {
 
 class _IntroSliderViewState extends State<IntroSliderView> {
   final PageController _pageController = PageController();
+
   int _currentPage = 0;
 
-  UserProvider? _userProvider;
   UserRepository? _userRepo;
   PsValueHolder? _psValueHolder;
 
@@ -46,27 +45,42 @@ class _IntroSliderViewState extends State<IntroSliderView> {
     super.dispose();
   }
 
-  Future<void> _goToCategoryView({required bool onBoarding}) async {
-    final psValueHolder = _psValueHolder;
+  Future<void> _goToCategoryView({
+    required bool onBoarding,
+  }) async {
+    final PsValueHolder? psValueHolder = _psValueHolder;
 
     if (psValueHolder == null) {
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+      }
       return;
     }
 
     if (widget.settingSlider == 1) {
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+      }
       return;
     }
 
     if (psValueHolder.isForceLogin == true &&
         Utils.checkUserLoginId(psValueHolder) == 'nologinuser') {
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, RoutePaths.login_container);
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushReplacementNamed(
+        context,
+        RoutePaths.login_container,
+      );
       return;
     }
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
+
     Navigator.pushReplacementNamed(
       context,
       RoutePaths.CategoryView,
@@ -79,29 +93,19 @@ class _IntroSliderViewState extends State<IntroSliderView> {
 
   Future<void> _onNextPressed() async {
     if (_currentPage < 2) {
-      _pageController.animateToPage(
+      await _pageController.animateToPage(
         _currentPage + 1,
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeOutCubic,
       );
       return;
     }
+
     await _goToCategoryView(onBoarding: true);
   }
 
   Future<void> _onSkipPressed() async {
     await _goToCategoryView(onBoarding: false);
-  }
-
-  /// Returns the primary button label per slide index, matching the new designs:
-  /// Slide 0 → "التالي"
-  /// Slide 1 → "التالي"
-  /// Slide 2 → "ابدأ التبديل" (last slide of trust network design) or "ابدئي التبديل" for females
-  String _primaryLabel() {
-    if (_currentPage < 2) return 'التالي';
-    // Last slide CTA changes based on persona — but we keep it neutral for simplicity.
-    // The persona-aware label can be injected via PersonaResolver if needed.
-    return 'حدد اهتماماتك';
   }
 
   @override
@@ -112,17 +116,17 @@ class _IntroSliderViewState extends State<IntroSliderView> {
     return ChangeNotifierProvider<UserProvider>(
       lazy: false,
       create: (BuildContext context) {
-        final userProvider = UserProvider(
+        return UserProvider(
           repo: _userRepo!,
           psValueHolder: _psValueHolder!,
         );
-        _userProvider = userProvider;
-        return userProvider;
       },
       child: Consumer<UserProvider>(
-        builder: (BuildContext context, UserProvider provider, Widget? child) {
-          _userProvider = provider;
-
+        builder: (
+            BuildContext context,
+            UserProvider provider,
+            Widget? child,
+            ) {
           return AnnotatedRegion<SystemUiOverlayStyle>(
             value: SystemUiOverlayStyle.dark.copyWith(
               statusBarColor: Colors.transparent,
@@ -132,8 +136,7 @@ class _IntroSliderViewState extends State<IntroSliderView> {
               safeBottom: true,
               padding: EdgeInsets.zero,
               body: Stack(
-                children: [
-                  // ── Light background blobs ─────────────────────────
+                children: <Widget>[
                   Positioned(
                     top: -60,
                     right: -60,
@@ -159,19 +162,27 @@ class _IntroSliderViewState extends State<IntroSliderView> {
                     ),
                   ),
 
-                  // ── Pages ─────────────────────────────────────────
                   Positioned.fill(
                     child: PageView(
                       controller: _pageController,
-                      onPageChanged: (i) {
+                      onPageChanged: (int index) {
                         setState(() {
-                          _currentPage = i;
-                          if (i == 0) _slide1PlayKey++;
-                          if (i == 1) _slide2PlayKey++;
-                          if (i == 2) _slide3PlayKey++;
+                          _currentPage = index;
+
+                          if (index == 0) {
+                            _slide1PlayKey++;
+                          }
+
+                          if (index == 1) {
+                            _slide2PlayKey++;
+                          }
+
+                          if (index == 2) {
+                            _slide3PlayKey++;
+                          }
                         });
                       },
-                      children: [
+                      children: <Widget>[
                         Slide1Persona(
                           psValueHolder: _psValueHolder,
                           playKey: _slide1PlayKey,
@@ -188,9 +199,6 @@ class _IntroSliderViewState extends State<IntroSliderView> {
                     ),
                   ),
 
-
-
-                  // ── Bottom buttons ────────────────────────────────
                   Positioned(
                     left: 0,
                     right: 0,
@@ -201,78 +209,20 @@ class _IntroSliderViewState extends State<IntroSliderView> {
                         color: Colors.white.withOpacity(0.95),
                         child: Padding(
                           padding: const EdgeInsetsDirectional.fromSTEB(
-                              20, 8, 20, 16),
+                            20,
+                            8,
+                            20,
+                            16,
+                          ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
-                            children: [
+                            children: <Widget>[
                               IntroDots(current: _currentPage),
                               const SizedBox(height: 12),
-                              _currentPage == 0
-                                  ? Row(
-                                children: [
-                                  Expanded(
-                                    child: TaapdeelButton(
-                                      label: 'تخطي',
-                                      onPressed: _onSkipPressed,
-                                      isPrimary: false,
-                                      isExpanded: true,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    flex: 2,
-                                    child: TaapdeelButton(
-                                      label: 'التالي',
-                                      onPressed: _onNextPressed,
-                                      isPrimary: true,
-                                      isExpanded: true,
-                                    ),
-                                  ),
-                                ],
-                              )
-                                  : Row(
-                                children: [
-                                  // Show "تخطي" on slide 2, hide on last slide
-                                  if (_currentPage < 2) ...[
-                                    Expanded(
-                                      child: TaapdeelButton(
-                                        label: 'تخطي',
-                                        onPressed: _onSkipPressed,
-                                        isPrimary: false,
-                                        isExpanded: true,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      flex: 2,
-                                      child: TaapdeelButton(
-                                        label: 'التالي',
-                                        onPressed: _onNextPressed,
-                                        isPrimary: true,
-                                        isExpanded: true,
-                                      ),
-                                    ),
-                                  ] else ...[
-                                    Expanded(
-                                      child: TaapdeelButton(
-                                        label: 'تخطي',
-                                        onPressed: _onSkipPressed,
-                                        isPrimary: false,
-                                        isExpanded: true,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      flex: 2,
-                                      child: TaapdeelButton(
-                                        label: _primaryLabel(),
-                                        onPressed: _onNextPressed,
-                                        isPrimary: true,
-                                        isExpanded: true,
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                              _IntroBottomActions(
+                                currentPage: _currentPage,
+                                onNextPressed: _onNextPressed,
+                                onSkipPressed: _onSkipPressed,
                               ),
                             ],
                           ),
@@ -290,9 +240,65 @@ class _IntroSliderViewState extends State<IntroSliderView> {
   }
 }
 
-// ── Decorative background blob ─────────────────────────────────────────────────
+class _IntroBottomActions extends StatelessWidget {
+  const _IntroBottomActions({
+    required this.currentPage,
+    required this.onNextPressed,
+    required this.onSkipPressed,
+  });
+
+  final int currentPage;
+  final VoidCallback onNextPressed;
+  final VoidCallback onSkipPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    if (currentPage == 2) {
+      return Row(
+        children: <Widget>[
+          Expanded(
+            child: TaapdeelButton(
+              label: 'تأكيد',
+              onPressed: onNextPressed,
+              isPrimary: true,
+              isExpanded: true,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: TaapdeelButton(
+            label: 'تخطي',
+            onPressed: onSkipPressed,
+            isPrimary: false,
+            isExpanded: true,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 2,
+          child: TaapdeelButton(
+            label: 'التالي',
+            onPressed: onNextPressed,
+            isPrimary: true,
+            isExpanded: true,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _BackgroundBlob extends StatelessWidget {
-  const _BackgroundBlob({required this.size, required this.color});
+  const _BackgroundBlob({
+    required this.size,
+    required this.color,
+  });
+
   final double size;
   final Color color;
 

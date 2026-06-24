@@ -159,68 +159,6 @@ class _MoreViewState extends State<MoreView> {
                             icon: Icons.inventory_2_outlined,
                           ),
 
-                          MoreMenuTile(
-                            title: Utils.getString(
-                                context, 'more__pending_post_title'),
-                            subtitle:
-                            Utils.getString(context, 'more__pending_list'),
-                            icon: Icons.hourglass_bottom_rounded,
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                RoutePaths.userItemListForProfile,
-                                arguments: ItemListIntentHolder(
-                                  userId: uid,
-                                  status: '0',
-                                  title: Utils.getString(
-                                      context, 'more__pending_post_title'),
-                                ),
-                              );
-                            },
-                          ),
-
-                          MoreMenuTile(
-                            title: Utils.getString(
-                                context, 'more__active_post_title'),
-                            subtitle: Utils.getString(
-                                context, 'more__search_active_post'),
-                            icon: Icons.check_circle_outline_rounded,
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                RoutePaths.userItemListForProfile,
-                                arguments: ItemListIntentHolder(
-                                  userId: uid,
-                                  status: '1',
-                                  title: Utils.getString(
-                                      context, 'more__active_post_title'),
-                                ),
-                              );
-                            },
-                          ),
-
-                          const SizedBox(height: PsDimens.space6),
-
-                          // ===================== Payments / Ads =====================
-                          MoreMenuTile(
-                            title: Utils.getString(context,
-                                'profile__package_transaction_history'),
-                            subtitle: Utils.getString(context,
-                                'more__package_transaction_subtitle'),
-                            icon: Icons.receipt_long_rounded,
-                            onTap: () => Navigator.pushNamed(context,
-                                RoutePaths.packageTransactionHistoryList),
-                          ),
-
-                          MoreMenuTile(
-                            title: Utils.getString(
-                                context, 'more__paid_ads_title'),
-                            subtitle: Utils.getString(
-                                context, 'more__paid_ads_promote_list'),
-                            icon: Icons.campaign_outlined,
-                            onTap: () => Navigator.pushNamed(
-                                context, RoutePaths.paidAdItemList),
-                          ),
 
                           MoreMenuTile(
                             title:
@@ -239,15 +177,6 @@ class _MoreViewState extends State<MoreView> {
                             title:
                             Utils.getString(context, 'more__activity_title'),
                             icon: Icons.auto_graph_rounded,
-                          ),
-
-                          MoreMenuTile(
-                            title: Utils.getString(context, 'more__offer_title'),
-                            subtitle:
-                            Utils.getString(context, 'more__offer_list'),
-                            icon: Icons.local_offer_outlined,
-                            onTap: () => Navigator.pushNamed(
-                                context, RoutePaths.offerList),
                           ),
 
                           MoreMenuTile(
