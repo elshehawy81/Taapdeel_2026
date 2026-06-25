@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:taapdeel/utils/perf_benchmark.dart';
 import 'package:taapdeel/ui/Foryou/widgets/suggested_swaps_section.dart';
 import 'package:taapdeel/ui/common/taapdeel/taapdeel_scaffold.dart';
@@ -7,6 +8,7 @@ import '../../constant/ps_constants.dart';
 import '../../constant/route_paths.dart';
 import '../../viewobject/holder/intent_holder/item_entry_intent_holder.dart';
 import '../../viewobject/product.dart';
+import '../Contacts/contact_network_provider.dart';
 import 'home_provider.dart';
 
 bool showContactUser = true;
@@ -529,6 +531,10 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
   bool _needsFinalRecommendationScroll = false;
   bool _endedForYouFirstOpen = false;
 
+  ContactNetworkProvider? _contactNetworkProvider;
+  int _lastHandledContactNetworkVersion = 0;
+  int _lastStartedContactSyncAfterRecommendationsVersion = 0;
+
   String _productId(Product? product) {
     return (product?.id ?? '').toString().trim();
   }
@@ -590,6 +596,91 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
     TaapdeelPerfBenchmark.end('foryou_first_open_total');
   }
 
+  void _tryStartContactSyncAfterRecommendations(HomeProvider home) {
+    if (!_isLoggedIn || !mounted) return;
+    if (home.recLoading) return;
+
+    final int version = home.recommendationsFinishedVersion;
+    if (version <= 0 ||
+        version <= _lastStartedContactSyncAfterRecommendationsVersion) {
+      return;
+    }
+
+    final String finishedItemId = home.lastRecommendationsFinishedItemId.trim();
+    if (finishedItemId.isEmpty) return;
+
+    final ContactNetworkProvider? contactProvider = _contactNetworkProvider;
+    if (contactProvider == null) return;
+
+    _lastStartedContactSyncAfterRecommendationsVersion = version;
+
+    Future<void>(() async {
+      await contactProvider.startDeferredSyncAfterRecommendations(
+        userId: widget.userId,
+        reason: 'recommendations_finished',
+      );
+    });
+  }
+
+  void _bindContactNetworkProvider() {
+    ContactNetworkProvider? nextProvider;
+
+    try {
+      nextProvider = Provider.of<ContactNetworkProvider>(context, listen: false);
+    } catch (_) {
+      nextProvider = null;
+    }
+
+    if (_contactNetworkProvider == nextProvider) return;
+
+    _contactNetworkProvider?.removeListener(_onContactNetworkProviderChanged);
+    _contactNetworkProvider = nextProvider;
+
+    // أي تغيير سابق لفتح الصفحة لا يحتاج refresh إضافي؛ الترشيحات الأولى ستقرأ الحالة الحالية.
+    _lastHandledContactNetworkVersion =
+        nextProvider?.contactNetworkChangeVersion ?? _lastHandledContactNetworkVersion;
+
+    _contactNetworkProvider?.addListener(_onContactNetworkProviderChanged);
+  }
+
+  void _onContactNetworkProviderChanged() {
+    _tryRefreshRecommendationsAfterContactNetworkChange();
+  }
+
+  void _tryRefreshRecommendationsAfterContactNetworkChange() {
+    if (!_isLoggedIn || !mounted) return;
+
+    final ContactNetworkProvider? contactProvider = _contactNetworkProvider;
+    if (contactProvider == null) return;
+
+    final int version = contactProvider.contactNetworkChangeVersion;
+    if (version <= 0 || version <= _lastHandledContactNetworkVersion) return;
+
+    // انتظر notify الأخير بعد انتهاء sync حتى لا نعمل refresh أثناء القراءة/الإرسال.
+    if (contactProvider.isSyncing) return;
+
+    final HomeProvider home = HomeProvider.of(context, listen: false);
+    if (home.myItemId.trim().isEmpty) {
+      // لم يتم اختيار منتج بعد. لا نعلّم النسخة كـ handled حتى نحاول بعد تحميل منتجاتي.
+      return;
+    }
+
+    _lastHandledContactNetworkVersion = version;
+
+    Future<void>(() async {
+      await home.refreshRecommendationsAfterContactNetworkChange(
+        contactNetworkVersion: version,
+        reason: contactProvider.lastContactNetworkChangeReason,
+      );
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bindContactNetworkProvider();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -606,6 +697,7 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
         if (myProductResult is Future) {
           myProductResult.then((_) {
             TaapdeelPerfBenchmark.end('foryou_my_products');
+            _tryRefreshRecommendationsAfterContactNetworkChange();
             TaapdeelPerfBenchmark.printReport();
           }).catchError((_) {
             TaapdeelPerfBenchmark.end('foryou_my_products');
@@ -622,6 +714,7 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
 
   @override
   void dispose() {
+    _contactNetworkProvider?.removeListener(_onContactNetworkProviderChanged);
     _contentScrollController.dispose();
     super.dispose();
   }
@@ -641,6 +734,7 @@ class _HomeViewWidgetState extends State<HomeViewWidget> {
     final bool hasMyProducts = home.myProducts.isNotEmpty;
 
     _handleAutoScrollAfterProductSelection(home);
+    _tryStartContactSyncAfterRecommendations(home);
 
     // أول مرة تظهر نتيجة ForYou، انتهي من قياس الفتح الأول مرة واحدة فقط.
     if (hasMyProducts || (!home.myProductLoading && !hasMyProducts)) {

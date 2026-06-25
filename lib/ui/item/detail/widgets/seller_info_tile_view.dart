@@ -554,6 +554,77 @@ class _ImageAndTextWidgetState extends State<ImageAndTextWidget> {
         ],
 
         // ✅ الصف الرابع: معرض العائلة
+        if (_familyCountFuture != null) ...[
+          const SizedBox(height: 12),
+          FutureBuilder<int>(
+            future: _familyCountFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox.shrink();
+              }
+
+              final int count = snapshot.data ?? 0;
+              if (count <= 0) return const SizedBox.shrink();
+
+              return SizedBox(
+                height: 42,
+                child: Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: 2,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return _ProfileProductChip(
+                          icon: Icons.grid_view_rounded,
+                          label: 'جميع منتجاته',
+                          countText: null,
+                          gradient: const <Color>[
+                            Color(0xFF3F7CFF),
+                            Color(0xFF42C6F5),
+                          ],
+                          shadowColor: const Color(0x3342A5F5),
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              RoutePaths.userDetail,
+                              arguments: UserIntentHolder(
+                                userId: ownerId,
+                                userName: ownerName,
+                              ),
+                            );
+                          },
+                        );
+                      }
+
+                      return _ProfileProductChip(
+                        icon: Icons.family_restroom_rounded,
+                        label: 'معرض عائلته',
+                        countText: '$count',
+                        gradient: const <Color>[
+                          Color(0xFFFF9F1C),
+                          Color(0xFFFFC857),
+                        ],
+                        shadowColor: const Color(0x33FF9F1C),
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            RoutePaths.userDetail,
+                            arguments: UserIntentHolder(
+                              userId: ownerId,
+                              userName: ownerName,
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
 
         const SizedBox(height: 14),
 
@@ -606,77 +677,7 @@ class _ImageAndTextWidgetState extends State<ImageAndTextWidget> {
           ),
         ],
 
-        if (_familyCountFuture != null) ...[
-          const SizedBox(height: 12),
-          FutureBuilder<int>(
-            future: _familyCountFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox.shrink();
-              }
 
-              final int count = snapshot.data ?? 0;
-              if (count <= 0) return const SizedBox.shrink();
-
-              return SizedBox(
-                height: 42,
-                child: Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: 2,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return _ProfileProductChip(
-                          icon: Icons.grid_view_rounded,
-                          label: 'كل المنتجات',
-                          countText: null,
-                          gradient: const <Color>[
-                            Color(0xFF3F7CFF),
-                            Color(0xFF42C6F5),
-                          ],
-                          shadowColor: const Color(0x3342A5F5),
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              RoutePaths.userDetail,
-                              arguments: UserIntentHolder(
-                                userId: ownerId,
-                                userName: ownerName,
-                              ),
-                            );
-                          },
-                        );
-                      }
-
-                      return _ProfileProductChip(
-                        icon: Icons.family_restroom_rounded,
-                        label: 'معرض العائلة',
-                        countText: '$count',
-                        gradient: const <Color>[
-                          Color(0xFFFF9F1C),
-                          Color(0xFFFFC857),
-                        ],
-                        shadowColor: const Color(0x33FF9F1C),
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            RoutePaths.userDetail,
-                            arguments: UserIntentHolder(
-                              userId: ownerId,
-                              userName: ownerName,
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
 
 
       ],

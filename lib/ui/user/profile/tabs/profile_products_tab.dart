@@ -328,6 +328,12 @@ class _ProfileProductsTabState extends State<ProfileProductsTab>
                   final String tagKey =
                       'profile_${widget.type.name}_${item.id}';
 
+                  final bool isFamilyGallery = widget.type == ProfileTabType.family;
+                  final String? relationCodeForCard = _getRelationCode(item);
+                  final int? relationTypeForCard = isFamilyGallery
+                      ? _getRelationTypeForFamilyGallery(item)
+                      : null;
+
                   return TaapdeelProductCardItem(
                     product: item,
                     coreTagKey: tagKey,
@@ -335,6 +341,7 @@ class _ProfileProductsTabState extends State<ProfileProductsTab>
                     showRelationPanel: true,
                     showConditionChip: false,
                     showRotatingBanner: true,
+                    relationType: relationTypeForCard,
                     onTap: () {
                       if (item.id == null) return;
 
@@ -350,7 +357,7 @@ class _ProfileProductsTabState extends State<ProfileProductsTab>
                         arguments: holder,
                       );
                     },
-                    relationBackendCode: _getRelationCode(item),
+                    relationBackendCode: relationCodeForCard,
                     onTapFav: null,
                     selectedFav: false,
                   );
@@ -365,11 +372,62 @@ class _ProfileProductsTabState extends State<ProfileProductsTab>
   }
 
   String? _getRelationCode(Product p) {
-    try {
-      final v = (p.relationCode ?? '').toString().trim();
-      return v.isEmpty ? null : v;
-    } catch (_) {
-      return null;
+    String clean(dynamic value) {
+      final String text = (value ?? '').toString().trim();
+      if (text.isEmpty || text.toLowerCase() == 'null') return '';
+      return text;
+    }
+
+    final String code = clean(p.relationCode);
+    if (code.isNotEmpty) return code;
+
+    final String rawType = clean(p.relationType);
+    switch (rawType) {
+      case '1':
+        return 'FRIEND';
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+        return 'FAMILY';
+      case '6':
+        return 'BIG_FAMILY';
+      default:
+        return null;
     }
   }
+
+  int _getRelationTypeForFamilyGallery(Product p) {
+    String clean(dynamic value) {
+      final String text = (value ?? '').toString().trim();
+      if (text.isEmpty || text.toLowerCase() == 'null') return '';
+      return text;
+    }
+
+    // مهم: نقرأ الرقم التفصيلي الأول لأن relationCode غالبًا = FAMILY فقط.
+    // relationType هو الذي يحدد: 2 زوج/زوجة، 3 ابن/ابنة، 4 أب/أم، 5 أخ/أخت.
+    final String rawType = clean(p.relationType);
+    final int? parsedType = int.tryParse(rawType);
+    if (parsedType != null && parsedType > 0) {
+      return parsedType;
+    }
+
+    final String code = clean(p.relationCode).toUpperCase();
+    switch (code) {
+      case 'FRIEND':
+        return 1;
+      case 'FAMILY':
+        return 4;
+      case 'BIG_FAMILY':
+        return 6;
+      case 'SELF':
+        return 777;
+    }
+
+    // معرض العائلة لا يعرض إلا منتجات علاقات عائلية،
+    // فلو الـ Product model لم يحمل relation_code لأي سبب،
+    // نمرر FAMILY مباشرةً حتى يظهر شريط العلاقة بدل ما يختفي.
+    return 4;
+  }
+
 }

@@ -141,6 +141,35 @@ class ContactNetworkProvider extends ChangeNotifier {
     );
   }
 
+  Set<String> _suggestionUserIds(List<UsersPhoneModel> items) {
+    return items
+        .map((UsersPhoneModel user) => (user.userId ?? '').trim())
+        .where((String id) => id.isNotEmpty)
+        .toSet();
+  }
+
+  void _markContactNetworkChangedIfNewUsers({
+    required String source,
+    required List<UsersPhoneModel> before,
+    required List<UsersPhoneModel> after,
+  }) {
+    final Set<String> beforeIds = _suggestionUserIds(before);
+    final Set<String> afterIds = _suggestionUserIds(after);
+
+    final bool hasNewUsers = afterIds.any((String id) => !beforeIds.contains(id));
+    if (!hasNewUsers) return;
+
+    _contactNetworkChangeVersion++;
+    _lastContactNetworkChangedAt = DateTime.now();
+    _lastContactNetworkChangeReason = source;
+
+    debugPrint(
+      '[TAAPDEEL/CONTACT_NETWORK_CHANGE] '
+          'version=$_contactNetworkChangeVersion source=$source '
+          'before=${beforeIds.length} after=${afterIds.length}',
+    );
+  }
+
   bool _initializedForSession = false;
   bool _isSyncing = false;
   bool _isLoadingCache = false;
@@ -153,6 +182,18 @@ class ContactNetworkProvider extends ChangeNotifier {
   List<UsersPhoneModel> _suggestions = <UsersPhoneModel>[];
   final Map<String, String> _contactNameByPhone = <String, String>{};
 
+  int _contactNetworkChangeVersion = 0;
+  DateTime? _lastContactNetworkChangedAt;
+  String _lastContactNetworkChangeReason = '';
+
+  /// Auto contact-sync is intentionally deferred until the first recommendations
+  /// request finishes. This prevents phone-book sync from competing with the
+  /// ForYou opening path.
+  bool _autoSyncPendingAfterRecommendations = false;
+  bool _autoSyncStartedAfterRecommendations = false;
+  bool _pendingAutoSyncForceAfterRecommendations = false;
+  String _pendingAutoSyncReasonAfterRecommendations = '';
+
   bool get isSyncing => _isSyncing;
   bool get isLoadingCache => _isLoadingCache;
   bool get hasPermission => _hasPermission;
@@ -161,11 +202,137 @@ class ContactNetworkProvider extends ChangeNotifier {
   List<UsersPhoneModel> get suggestions => List<UsersPhoneModel>.unmodifiable(_suggestions);
   int get pendingCount => _suggestions.length;
 
+  /// يزيد فقط عندما تنتهي مزامنة الكونتاكتس وتضيف علاقات/اقتراحات جديدة.
+  /// Home/ForYou تستخدمه لإعادة تحميل الترشيحات مرة واحدة بدون تعطيل فتح الصفحة.
+  int get contactNetworkChangeVersion => _contactNetworkChangeVersion;
+  DateTime? get lastContactNetworkChangedAt => _lastContactNetworkChangedAt;
+  String get lastContactNetworkChangeReason => _lastContactNetworkChangeReason;
+
   bool get isLoggedIn => _userId.isNotEmpty && _userId != 'nologinuser';
 
   /// The network chip should remain visible because it is a core growth feature.
   /// It can show "شبكتي" before permission/login, or "X جدد" when matches exist.
   bool get canShowNetworkChip => true;
+
+  void _resetDeferredAutoSyncState() {
+    _autoSyncPendingAfterRecommendations = false;
+    _autoSyncStartedAfterRecommendations = false;
+    _pendingAutoSyncForceAfterRecommendations = false;
+    _pendingAutoSyncReasonAfterRecommendations = '';
+  }
+
+  bool _isAutoAppOpenReason(String reason) {
+    final String r = reason.toLowerCase();
+    return r.contains('app_open') || r.contains('guest_app_open');
+  }
+
+  bool _hasFreshContactSignature() {
+    final bool hasSignature = (_lastSignature ?? '').trim().isNotEmpty;
+    final DateTime? lastSync = _lastSyncAt;
+    if (!hasSignature || lastSync == null) return false;
+    return DateTime.now().difference(lastSync) < _fullSyncInterval;
+  }
+
+  void _deferAutoSyncUntilRecommendations({
+    required bool force,
+    required String reason,
+  }) {
+    // مهم جدًا: app_open لا يجب أن يتحول إلى full phone-book sync.
+    // قراءة الكونتاكتس من platform channel قد تجمد الـ UI على أجهزة بها آلاف الأسماء.
+    final bool safeForce = force && !_isAutoAppOpenReason(reason);
+
+    if (_autoSyncStartedAfterRecommendations) {
+      _contactPerfInstant('auto_sync_defer_skip_already_started', data: <String, Object?>{
+        'reason': reason,
+        'force': force,
+        'safeForce': safeForce,
+      });
+      return;
+    }
+
+    _autoSyncPendingAfterRecommendations = true;
+    _pendingAutoSyncForceAfterRecommendations =
+        _pendingAutoSyncForceAfterRecommendations || safeForce;
+
+    if (_pendingAutoSyncReasonAfterRecommendations.isEmpty || safeForce) {
+      _pendingAutoSyncReasonAfterRecommendations = reason;
+    }
+
+    _contactPerfInstant('auto_sync_deferred_until_recommendations', data: <String, Object?>{
+      'reason': reason,
+      'force': force,
+      'safeForce': safeForce,
+    });
+
+    debugPrint(
+      '[TAAPDEEL/CONTACT_SYNC_DEFERRED] '
+          'deferred_until_recommendations reason=$reason force=$safeForce',
+    );
+  }
+
+  Future<void> startDeferredSyncAfterRecommendations({
+    String? userId,
+    String reason = 'recommendations_finished',
+  }) async {
+    final Stopwatch totalSw = _contactPerfStart();
+
+    final String normalizedUserId = _normalizeUserId(
+      userId ?? (_userId.isNotEmpty ? _userId : _readCurrentUserId()),
+    );
+    if (normalizedUserId.isNotEmpty) {
+      _userId = normalizedUserId;
+    }
+
+    if (!isLoggedIn) {
+      _contactPerfLog('auto_sync_after_recommendations_skip_not_logged_in', totalSw, data: <String, Object?>{
+        'reason': reason,
+      });
+      return;
+    }
+
+    if (_autoSyncStartedAfterRecommendations) {
+      _contactPerfLog('auto_sync_after_recommendations_skip_already_started', totalSw, data: <String, Object?>{
+        'reason': reason,
+      });
+      return;
+    }
+
+    // Safety fallback: if initForApp did not run before HomeView, still allow
+    // the first sync to start after recommendations finish.
+    if (!_autoSyncPendingAfterRecommendations) {
+      _autoSyncPendingAfterRecommendations = true;
+      _pendingAutoSyncReasonAfterRecommendations = reason;
+    }
+
+    _autoSyncStartedAfterRecommendations = true;
+
+    final String baseReason = _pendingAutoSyncReasonAfterRecommendations.isNotEmpty
+        ? _pendingAutoSyncReasonAfterRecommendations
+        : reason;
+    final bool force = _pendingAutoSyncForceAfterRecommendations &&
+        !_isAutoAppOpenReason(baseReason);
+
+    _autoSyncPendingAfterRecommendations = false;
+    _pendingAutoSyncForceAfterRecommendations = false;
+    _pendingAutoSyncReasonAfterRecommendations = '';
+
+    _contactPerfLog('auto_sync_start_after_recommendations', totalSw, data: <String, Object?>{
+      'reason': baseReason,
+      'force': force,
+    });
+
+    debugPrint(
+      '[TAAPDEEL/CONTACT_SYNC_DEFERRED] '
+          'start_after_recommendations reason=$baseReason force=$force',
+    );
+
+    unawaited(
+      syncInBackground(
+        force: force,
+        reason: '${baseReason}_after_recommendations',
+      ),
+    );
+  }
 
   Future<void> initForApp({String? userId, bool forceAfterLogin = false}) async {
     // ✅ BENCHMARK: وقت init كامل لنظام جهات الاتصال
@@ -173,7 +340,15 @@ class ContactNetworkProvider extends ChangeNotifier {
     final Stopwatch totalSw = _contactPerfStart();
 
     final String newUserId = _normalizeUserId(userId ?? _readCurrentUserId());
-    final bool becameLoggedIn = _userId.isEmpty && newUserId.isNotEmpty;
+    final String previousUserId = _userId;
+    final bool becameLoggedIn = previousUserId.isEmpty && newUserId.isNotEmpty;
+    final bool userChanged = previousUserId.isNotEmpty &&
+        newUserId.isNotEmpty &&
+        previousUserId != newUserId;
+
+    if (becameLoggedIn || userChanged) {
+      _resetDeferredAutoSyncState();
+    }
 
     _userId = newUserId;
 
@@ -193,7 +368,7 @@ class ContactNetworkProvider extends ChangeNotifier {
     });
 
     if (isLoggedIn) {
-      _contactPerfInstant('init_schedule_refresh_and_sync', data: <String, Object?>{
+      _contactPerfInstant('init_schedule_refresh_and_defer_sync', data: <String, Object?>{
         'becameLoggedIn': becameLoggedIn,
         'forceAfterLogin': forceAfterLogin,
         'initialized': _initializedForSession,
@@ -202,11 +377,18 @@ class ContactNetworkProvider extends ChangeNotifier {
 
       if (!_initializedForSession || forceAfterLogin || becameLoggedIn) {
         _initializedForSession = true;
-        unawaited(
-          syncInBackground(
-            force: forceAfterLogin || becameLoggedIn,
-            reason: becameLoggedIn ? 'after_login' : 'app_open',
-          ),
+
+        // Cold start with a saved user used to be treated as "becameLoggedIn",
+        // which forced a full contacts read on every app open. Keep automatic
+        // app-open sync cheap; full phone-book sync is reserved for real login,
+        // explicit permission/manual refresh, or when there is no recent cache.
+        final bool hasFreshSignature = _hasFreshContactSignature();
+        final bool shouldForceDeferredSync = forceAfterLogin && !hasFreshSignature;
+        final String deferredReason = shouldForceDeferredSync ? 'after_login' : 'app_open';
+
+        _deferAutoSyncUntilRecommendations(
+          force: shouldForceDeferredSync,
+          reason: deferredReason,
         );
       }
     } else {
@@ -214,8 +396,11 @@ class ContactNetworkProvider extends ChangeNotifier {
       // and refresh in background only when expired. This does not write to DB.
       if (_hasPermission && !_initializedForSession) {
         _initializedForSession = true;
-        _contactPerfInstant('init_guest_sync_scheduled');
-        unawaited(syncInBackground(reason: 'guest_app_open'));
+        _contactPerfInstant('init_guest_sync_deferred_until_recommendations');
+        _deferAutoSyncUntilRecommendations(
+          force: false,
+          reason: 'guest_app_open',
+        );
       }
     }
 
@@ -228,9 +413,10 @@ class ContactNetworkProvider extends ChangeNotifier {
   }
 
   /// Explicitly call this after phone login succeeds. It reuses any intro permission
-  /// and immediately syncs to backend so the DB suggestions table becomes populated.
+  /// and defers the backend sync until the first recommendations request finishes.
   Future<void> initAfterLogin(String userId) async {
     final Stopwatch totalSw = _contactPerfStart();
+    _resetDeferredAutoSyncState();
     _userId = _normalizeUserId(userId);
     _initializedForSession = true;
 
@@ -257,8 +443,11 @@ class ContactNetworkProvider extends ChangeNotifier {
     await refreshSuggestionsFromServer();
 
     if (_hasPermission) {
-      _contactPerfInstant('after_login_force_sync_scheduled');
-      unawaited(syncInBackground(force: true, reason: 'after_login_force'));
+      _contactPerfInstant('after_login_force_sync_deferred_until_recommendations');
+      _deferAutoSyncUntilRecommendations(
+        force: true,
+        reason: 'after_login_force',
+      );
     } else {
       notifyListeners();
     }
@@ -424,6 +613,32 @@ class ContactNetworkProvider extends ChangeNotifier {
       'lastLightCheck': _lastLightCheckAt?.toIso8601String() ?? '',
     });
 
+    final bool autoAppOpenReason = _isAutoAppOpenReason(reason);
+
+    if (!force && autoAppOpenReason) {
+      // Automatic app-open sync must never read the full phone book.
+      // FlutterContacts.getContacts(withProperties: true) can freeze UI for seconds
+      // on large address books. Use only server-side light check/cache here.
+      if ((_lastSignature ?? '').trim().isNotEmpty && _shouldLightCheckNow()) {
+        final Stopwatch lightSw = _contactPerfStart();
+        await _runLightCheck(reason: reason);
+        _contactPerfLog('sync_auto_app_open_lightcheck_path', lightSw, data: <String, Object?>{
+          'reason': reason,
+        });
+      } else {
+        _contactPerfInstant('sync_auto_app_open_skip_full_read', data: <String, Object?>{
+          'reason': reason,
+          'hasSignature': (_lastSignature ?? '').trim().isNotEmpty,
+          'lightCheckDue': _shouldLightCheckNow(),
+        });
+      }
+      _contactPerfLog('sync_total_auto_app_open_light_or_skip', totalSw, data: <String, Object?>{
+        'reason': reason,
+      });
+      TaapdeelPerfBenchmark.end('contact_sync_$reason');
+      return;
+    }
+
     if (!force && !fullSyncDue) {
       if (_lastSignature != null && _shouldLightCheckNow()) {
         final Stopwatch lightSw = _contactPerfStart();
@@ -528,7 +743,13 @@ class ContactNetworkProvider extends ChangeNotifier {
       });
 
       final Stopwatch mergeSw = _contactPerfStart();
+      final List<UsersPhoneModel> suggestionsBeforeSync = List<UsersPhoneModel>.from(_suggestions);
       _suggestions = _mergeUnique(merged, <UsersPhoneModel>[]);
+      _markContactNetworkChangedIfNewUsers(
+        source: 'full_sync_$reason',
+        before: suggestionsBeforeSync,
+        after: _suggestions,
+      );
       _lastSignature = signature;
       _contactPerfLog('sync_merge_unique', mergeSw, data: <String, Object?>{
         'input': merged.length,
@@ -669,7 +890,13 @@ class ContactNetworkProvider extends ChangeNotifier {
         });
         if (newMatches.isNotEmpty) {
           final Stopwatch mergeSw = _contactPerfStart();
+          final List<UsersPhoneModel> suggestionsBeforeLightCheck = List<UsersPhoneModel>.from(_suggestions);
           _suggestions = _mergeUnique(newMatches, _suggestions);
+          _markContactNetworkChangedIfNewUsers(
+            source: 'lightcheck_$reason',
+            before: suggestionsBeforeLightCheck,
+            after: _suggestions,
+          );
           _contactPerfLog('lightcheck_merge_new_matches', mergeSw, data: <String, Object?>{
             'suggestions': _suggestions.length,
           });

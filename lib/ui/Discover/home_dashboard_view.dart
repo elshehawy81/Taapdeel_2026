@@ -1225,6 +1225,7 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
                                 showRotatingBanner: true,
                                 showRelationPanel: true,
                                 showConditionChip: false,
+                                relationType: _getRelationType(product),
                                 relationBackendCode: _getRelationCode(product),
                                 onTapFav: null,
                                 selectedFav: false,
@@ -1774,5 +1775,21 @@ String? _getRelationCode(Product p) {
   } catch (_) {
     return null;
   }
+}
+
+int? _getRelationType(Product p) {
+  String clean(dynamic value) {
+    final String text = (value ?? '').toString().trim();
+    if (text.isEmpty || text.toLowerCase() == 'null') return '';
+    return text;
+  }
+
+  try {
+    final String rawType = clean(p.relationType);
+    final int? parsed = int.tryParse(rawType);
+    if (parsed != null && parsed > 0) return parsed;
+  } catch (_) {}
+
+  return null;
 }
 

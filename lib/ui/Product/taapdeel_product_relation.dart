@@ -79,13 +79,21 @@ class TaapdeelRelationUI {
     this.showOwnerWithRelation = false,
   });
 
+  /// ✅ helper: get only first word from owner name
+  /// مثال: "احلام الشهاوي" => "احلام"
+  static String _firstNameOnly(String? ownerName) {
+    final String cleaned = (ownerName ?? '').trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (cleaned.isEmpty) return '';
+    return cleaned.split(' ').first.trim();
+  }
+
   /// ✅ helper: build "Ahmed (عائلتك)" only when direct relation
   static String _composeLabel({
     required String baseRelationLabel,
     required String? ownerName,
     required bool showOwnerWithRelation,
   }) {
-    final name = (ownerName ?? '').trim();
+    final String name = _firstNameOnly(ownerName);
     if (!showOwnerWithRelation || name.isEmpty) return baseRelationLabel;
     return '$name ($baseRelationLabel)';
   }
@@ -114,7 +122,17 @@ class TaapdeelRelationUI {
         isStrongFamily || t == RelationIds.friends || t == RelationIds.bigFamily || t == RelationIds.relatives;
 
     if (isStrongFamily) {
-      final base = 'عائلتك';
+      String base = 'عائلتك';
+      if (t == RelationIds.spouse) {
+        base = 'زوج/زوجة';
+      } else if (t == RelationIds.child) {
+        base = 'ابن/ابنة';
+      } else if (t == RelationIds.parents) {
+        base = 'أب/أم';
+      } else if (t == RelationIds.sibling) {
+        base = 'أخ/أخت';
+      }
+
       return TaapdeelRelationUI(
         visible: true,
         ownerName: ownerName,

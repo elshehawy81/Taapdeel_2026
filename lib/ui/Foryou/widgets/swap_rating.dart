@@ -788,16 +788,7 @@ List<SwapCriterionItem> buildSuggestedSwapCriteria(
           ? kFamilyRecommendationShadow
           : const Color(0x120C587A),
     ),
-    SwapCriterionItem(
-      icon: _relationIconForLabel(relationLabel),
-      label: relationLabel,
-      enabled: relationOk,
-      iconColor: const Color(0xFF00897B),
-      textColor: const Color(0xFF00695C),
-      backgroundColor: const Color(0xFFE6F7F4),
-      borderColor: const Color(0xFF8EDBD1),
-      shadowColor: const Color(0x1800897B),
-    ),
+
     SwapCriterionItem(
       icon: Icons.new_releases_rounded,
       label: 'حالة جديد',
@@ -854,6 +845,16 @@ List<SwapCriterionItem> buildSuggestedSwapCriteria(
       label: 'حالة جيدة',
       enabled: qualitynormal,
       isGold: false,
+    ),
+    SwapCriterionItem(
+      icon: _relationIconForLabel(relationLabel),
+      label: relationLabel,
+      enabled: relationOk,
+      iconColor: const Color(0xFF00897B),
+      textColor: const Color(0xFF00695C),
+      backgroundColor: const Color(0xFFE6F7F4),
+      borderColor: const Color(0xFF8EDBD1),
+      shadowColor: const Color(0x1800897B),
     ),
     // ✅ منتجك مناسب للطرف الآخر / لعائلة الطرف الآخر
     SwapCriterionItem(

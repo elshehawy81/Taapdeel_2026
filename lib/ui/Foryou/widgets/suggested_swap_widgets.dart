@@ -2244,6 +2244,59 @@ class _CompareMiniProductCard extends StatelessWidget {
     return isMine ? 'منتجك' : 'منتج مرشح';
   }
 
+  String _cleanRelationValue(dynamic value) {
+    final String text = (value ?? '').toString().trim();
+    if (text.isEmpty || text.toLowerCase() == 'null') return '';
+    return text;
+  }
+
+  String? _resolveRelationBackendCodeForCard(Product? p) {
+    final String explicitCode = _cleanRelationValue(relationBackendCode).toUpperCase();
+    if (explicitCode.isNotEmpty) return explicitCode;
+
+    final String productCode = _cleanRelationValue(p?.relationCode).toUpperCase();
+    if (productCode.isNotEmpty) return productCode;
+
+    final String rawType = _cleanRelationValue(p?.relationType);
+    switch (rawType) {
+      case '1':
+        return 'FRIEND';
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+        return 'FAMILY';
+      case '6':
+        return 'BIG_FAMILY';
+      default:
+        return null;
+    }
+  }
+
+  int? _resolveRelationTypeForCard(Product? p) {
+    // مهم: نقرأ الرقم التفصيلي أولاً عشان يظهر أخ/أخت أو ابن/ابنة
+    // بدل ما FAMILY تتحول لعلاقة عامة.
+    final String rawType = _cleanRelationValue(p?.relationType);
+    final int? parsedType = int.tryParse(rawType);
+    if (parsedType != null && parsedType > 0) {
+      return parsedType;
+    }
+
+    final String code = (_resolveRelationBackendCodeForCard(p) ?? '').toUpperCase();
+    switch (code) {
+      case 'FRIEND':
+        return 1;
+      case 'FAMILY':
+        return 4;
+      case 'BIG_FAMILY':
+        return 6;
+      case 'SELF':
+        return 777;
+      default:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final Product? p = product;
@@ -2256,10 +2309,11 @@ class _CompareMiniProductCard extends StatelessWidget {
         cardWidth: width,
         cardHeight: height,
         outerMargin: EdgeInsets.zero,
-        variant: TaapdeelProductCardVariant.deal,
+        variant: TaapdeelProductCardVariant.family,
         showRotatingBanner: true,
         showRelationPanel: !isMine,
-        relationBackendCode: isMine ? null : relationBackendCode,
+        relationType: isMine ? null : _resolveRelationTypeForCard(p),
+        relationBackendCode: isMine ? null : _resolveRelationBackendCodeForCard(p),
       );
 
       return Directionality(

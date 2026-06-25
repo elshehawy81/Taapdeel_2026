@@ -68,6 +68,15 @@ class HomeProvider extends ChangeNotifier {
   String? recommendationsErrorMessage;
   int _recommendationRequestSerial = 0;
   int _myProductsRequestSerial = 0;
+  int _lastContactNetworkRecommendationsRefreshVersion = 0;
+
+  /// يزيد بعد انتهاء أي طلب ترشيحات فعلي للمنتج الحالي.
+  /// HomeView يستخدمه لتشغيل مزامنة الكونتاكتس بعد انتهاء الترشيحات، وليس قبلها.
+  int _recommendationsFinishedVersion = 0;
+  String _lastRecommendationsFinishedItemId = '';
+
+  int get recommendationsFinishedVersion => _recommendationsFinishedVersion;
+  String get lastRecommendationsFinishedItemId => _lastRecommendationsFinishedItemId;
 
   final http.Client _httpClient = http.Client();
 
@@ -183,6 +192,8 @@ class HomeProvider extends ChangeNotifier {
     _autoSelectedMyProductOnce = false;
     _recommendationRequestSerial++;
     _myProductsRequestSerial++;
+    _recommendationsFinishedVersion = 0;
+    _lastRecommendationsFinishedItemId = '';
   }
 
   void _scheduleRecommendationsForSelectedProduct({
@@ -365,6 +376,8 @@ class HomeProvider extends ChangeNotifier {
       recommendationsErrorMessage = null;
       _autoSelectedMyProductOnce = false;
       _recommendationRequestSerial++;
+      _recommendationsFinishedVersion = 0;
+      _lastRecommendationsFinishedItemId = '';
     }
 
     if (isInvalidUserId(effectiveUserId)) {
@@ -560,6 +573,34 @@ class HomeProvider extends ChangeNotifier {
         notifyListeners();
       }
     }
+  }
+
+  Future<void> refreshRecommendationsAfterContactNetworkChange({
+    required int contactNetworkVersion,
+    String reason = 'contact_sync',
+  }) async {
+    if (contactNetworkVersion <= 0) return;
+    if (contactNetworkVersion <= _lastContactNetworkRecommendationsRefreshVersion) {
+      return;
+    }
+
+    final String itemId = myItemId.trim();
+    if (itemId.isEmpty) {
+      // لا نعتبر النسخة اتعالجت هنا؛ بمجرد اختيار منتج ستتاح محاولة refresh مرة أخرى.
+      return;
+    }
+
+    _lastContactNetworkRecommendationsRefreshVersion = contactNetworkVersion;
+
+    debugPrint(
+      '[TAAPDEEL/REC_AFTER_CONTACT_SYNC] '
+          'version=$contactNetworkVersion reason=$reason item_id=$itemId',
+    );
+
+    await topRecProduct(
+      PsUrl.ps_top_recom_url,
+      itemId: itemId,
+    );
   }
 
   Future<void> getWishListProduct() async {
@@ -789,6 +830,12 @@ class HomeProvider extends ChangeNotifier {
         recLoading = false;
         selectedSwapProduct = null;
         sellerProduct = null;
+        _recommendationsFinishedVersion++;
+        _lastRecommendationsFinishedItemId = requestedItemId;
+        debugPrint(
+          '[TAAPDEEL/REC_FINISHED] '
+              'version=$_recommendationsFinishedVersion item_id=$requestedItemId',
+        );
         notifyListeners();
         TaapdeelPerfBenchmark.end('rec_notify');
       }

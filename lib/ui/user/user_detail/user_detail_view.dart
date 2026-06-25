@@ -284,6 +284,66 @@ class _UserDetailViewState extends State<UserDetailView>
     );
   }
 
+
+
+  String? _getRelationCode(Product p) {
+    String clean(dynamic value) {
+      final String text = (value ?? '').toString().trim();
+      if (text.isEmpty || text.toLowerCase() == 'null') return '';
+      return text;
+    }
+
+    final String code = clean(p.relationCode).toUpperCase();
+    if (code.isNotEmpty) return code;
+
+    final String rawType = clean(p.relationType);
+    switch (rawType) {
+      case '1':
+        return 'FRIEND';
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+        return 'FAMILY';
+      case '6':
+        return 'BIG_FAMILY';
+      default:
+        return null;
+    }
+  }
+
+  int _getRelationTypeForFamilyGallery(Product p) {
+    String clean(dynamic value) {
+      final String text = (value ?? '').toString().trim();
+      if (text.isEmpty || text.toLowerCase() == 'null') return '';
+      return text;
+    }
+
+    // مهم: نقرأ الرقم التفصيلي الأول لأن relationCode غالبًا = FAMILY فقط.
+    // relationType هو الذي يحدد: 2 زوج/زوجة، 3 ابن/ابنة، 4 أب/أم، 5 أخ/أخت.
+    final String rawType = clean(p.relationType);
+    final int? parsedType = int.tryParse(rawType);
+    if (parsedType != null && parsedType > 0) {
+      return parsedType;
+    }
+
+    final String code = clean(p.relationCode).toUpperCase();
+    switch (code) {
+      case 'FRIEND':
+        return 1;
+      case 'FAMILY':
+        return 4;
+      case 'BIG_FAMILY':
+        return 6;
+      case 'SELF':
+        return 777;
+    }
+
+    // User detail family gallery is already a family-network section.
+    // If parsing loses relation_code, keep the relation bar visible.
+    return 4;
+  }
+
   Widget _buildFamilyGrid(ProfileFamilyItemsProvider famP) {
     final List<Product> data = (famP.itemList.data ?? <Product>[]);
 
@@ -327,6 +387,8 @@ class _UserDetailViewState extends State<UserDetailView>
           }
 
           final String tagKey = 'family_${famP.hashCode}_${product.id ?? ''}';
+          final String? relationCodeForCard = _getRelationCode(product);
+          final int relationTypeForCard = _getRelationTypeForFamilyGallery(product);
 
           return TaapdeelProductCardItem(
             coreTagKey: tagKey,
@@ -349,6 +411,8 @@ class _UserDetailViewState extends State<UserDetailView>
             variant: TaapdeelProductCardVariant.family,
             showRotatingBanner: true,
             showRelationPanel: true,
+            relationType: relationTypeForCard,
+            relationBackendCode: relationCodeForCard,
             showConditionChip: false,
             onTapFav: () {},
             selectedFav: false,
